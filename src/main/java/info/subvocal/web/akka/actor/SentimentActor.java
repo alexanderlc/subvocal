@@ -38,14 +38,14 @@ public class SentimentActor extends UntypedActor {
 
             LOGGER.info("SentimentActor: Received message: {}", message);
 
-            // asynchronously persist the sentiment
-            ActorRef sentimentPersistenceActor = actorSystem.actorOf(
+            // Asynchronously persist the sentiment.
+            // Create the SentimentPersistenceActor as a child of the SentimentActor using getContext().
+            // When we shutdown the SentimentActor at the API, then sentimentPersistenceActor should cascade shutdown
+            ActorRef sentimentPersistenceActor = getContext().actorOf(
                     SpringExtProvider.get(actorSystem).props("SentimentPersistenceActor"), "sentimentPersistenceActor_"
                             + UUID.randomUUID() );
             sentimentPersistenceActor.tell(message, null);
 
-            // todo check if we need to stop the sentimentPersistenceActor - when we shutdown the SentimentActor
-            // at the API, then sentimentPersistenceActor should cascade shutdown
             // count it
 
         } else {

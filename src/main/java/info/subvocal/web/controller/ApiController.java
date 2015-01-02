@@ -81,11 +81,12 @@ public class ApiController {
             sentimentActor.tell(new CreateSentiment(sentiment), null);
             return new ResponseEntity<>("Create sentiment request received", HttpStatus.CREATED);
         } catch (Exception e) {
-            System.err.println("Failed getting result: " + e.getMessage());
+            System.err.println("Failed to initiate sentiment request: " + e.getMessage());
             throw e;
         } finally {
             // we are done with the actor - stop it
-            actorSystem.stop(sentimentActor);
+            // todo Note: stop will terminate all the children too - need to work out what to do now?
+//            actorSystem.stop(sentimentActor);
         }
     }
 
