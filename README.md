@@ -9,6 +9,7 @@ mvn clean package && java -jar target/web-0.0.1.jar
 
 # Todo
 
+- Use validation annotations
 - Call system actor shutdown and terminate when the spring context is shutting down
 
 # Acknowledgements
