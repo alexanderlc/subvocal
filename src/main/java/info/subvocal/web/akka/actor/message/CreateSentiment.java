@@ -1,14 +1,21 @@
 package info.subvocal.web.akka.actor.message;
 
 import info.subvocal.sentiment.entity.Sentiment;
-import info.subvocal.sentiment.entity.SentimentType;
+
+import javax.validation.constraints.NotNull;
 
 /**
  * Message that indicates a sentiment to be created
  */
-public class CreateSentiment extends Sentiment {
+public class CreateSentiment {
 
-    public CreateSentiment(String url, SentimentType sentimentType, String createdByUserId) {
-        super(url, sentimentType, createdByUserId);
+    private Sentiment sentiment;
+
+    public CreateSentiment(@NotNull Sentiment sentiment) {
+        this.sentiment = sentiment;
+    }
+
+    public Sentiment getSentiment() {
+        return sentiment;
     }
 }

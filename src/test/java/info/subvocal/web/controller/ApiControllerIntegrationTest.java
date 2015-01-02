@@ -1,5 +1,8 @@
 package info.subvocal.web.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import info.subvocal.sentiment.entity.Sentiment;
+import info.subvocal.sentiment.entity.SentimentType;
 import info.subvocal.web.Application;
 import org.junit.Before;
 import org.junit.Test;
@@ -14,6 +17,7 @@ import org.springframework.web.context.WebApplicationContext;
 import javax.inject.Inject;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -29,10 +33,12 @@ public class ApiControllerIntegrationTest {
     private WebApplicationContext context;
 
     private MockMvc mvc;
+    private ObjectMapper objectMapper;
 
     @Before
     public void setUp() {
         this.mvc = MockMvcBuilders.webAppContextSetup(this.context).build();
+        this.objectMapper = new ObjectMapper();
     }
 
     @Test
@@ -50,6 +56,23 @@ public class ApiControllerIntegrationTest {
     public void testCount_whenCalledTwice_thenOneStillReturned() throws Exception {
         mvcPerformGetOkAndExpect("/api/v1.0/_count-once", "1");
         mvcPerformGetOkAndExpect("/api/v1.0/_count-once", "1");
+    }
+
+    @Test
+    public void testCreateSentiment_whenCalledOnce_thenCreatedStatus() throws Exception {
+        this.mvc.perform(post("/api/v1.0/sentiment")
+                .header("Content-Type", "application/json")
+                .content(objectMapper.writeValueAsString(new Sentiment("/test.html", SentimentType.DISAGREE, "1"))))
+            .andExpect(content().string("Create sentiment request received"))
+            .andExpect(status().isCreated());
+    }
+
+    @Test
+    public void testCreateSentiment_whenCalledWithInvalidData_thenBadRequestResponseCode() throws Exception {
+        this.mvc.perform(post("/api/v1.0/sentiment")
+                .header("Content-Type", "application/json")
+                .content(objectMapper.writeValueAsString(new Sentiment("/test.html", null, "1"))))
+                .andExpect(status().isBadRequest());
     }
 
     private void mvcPerformGetOkAndExpect(String url, String expectedResult) throws Exception {

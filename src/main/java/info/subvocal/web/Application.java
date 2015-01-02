@@ -14,7 +14,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter
  *  main method for app
  */
 @Configuration
-@ComponentScan("info.subvocal.web")
+@ComponentScan("info.subvocal")
 @EnableWebMvc
 //@EnableTransactionManagement(proxyTargetClass = true)
 @EnableAutoConfiguration(

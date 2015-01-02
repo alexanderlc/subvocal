@@ -1,5 +1,8 @@
 package info.subvocal.sentiment.entity;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import javax.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.Date;
@@ -12,11 +15,13 @@ public class Sentiment implements Comparable, Serializable {
     /**
      * URL for the subject of the sentiment
      */
+    @NotNull
     private String url;
 
     /**
      * The type of sentiment felt for the subject
      */
+    @NotNull
     private SentimentType sentimentType;
 
     /**
@@ -27,9 +32,14 @@ public class Sentiment implements Comparable, Serializable {
     /**
      * UUID of the user/session responsible for the sentiment
      */
+    @NotNull
     private String createdByUserId;
 
-    public Sentiment(String url, SentimentType sentimentType, String createdByUserId) {
+    @JsonCreator
+    public Sentiment(
+            @JsonProperty("url") @NotNull String url,
+            @JsonProperty("sentimentType") @NotNull SentimentType sentimentType,
+            @JsonProperty("createdByUserId") @NotNull String createdByUserId) {
         this.url = url;
         this.sentimentType = sentimentType;
         this.createdByUserId = createdByUserId;
@@ -74,9 +84,13 @@ public class Sentiment implements Comparable, Serializable {
 
     @Override
     public int hashCode() {
-        int result = url.hashCode();
-        result = 31 * result + sentimentType.hashCode();
-        result = 31 * result + createdByUserId.hashCode();
+        int result = url != null ? url.hashCode() : 1;
+        if (sentimentType != null) {
+            result = 31 * result + sentimentType.hashCode();
+        }
+        if (createdByUserId != null) {
+            result = 31 * result + createdByUserId.hashCode();
+        }
         return result;
     }
 
@@ -84,7 +98,7 @@ public class Sentiment implements Comparable, Serializable {
      *  The compare to is used by the sorted set on created date (InMemorySentimentRepository)
      */
     @Override
-    public int compareTo(@NotNull Object o) {
+    public int compareTo(Object o) {
         if (this == o) return 0;
         if (o == null || getClass() != o.getClass()) throw new IllegalArgumentException("Invalid class for compareTo");
 

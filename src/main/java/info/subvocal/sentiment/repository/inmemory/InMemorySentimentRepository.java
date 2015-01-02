@@ -32,6 +32,8 @@ public class InMemorySentimentRepository implements SentimentRepository {
         Set<Sentiment> existingSentiments = sentimentDb.get(url);
 
         // todo this block probably needs a lock around it
+
+        // todo this doesn't work
         if (existingSentiments.contains(newSentiment)) {
             // todo test how this behaves in the actor system, perhaps use a checked exception?
             throw new IllegalStateException("Sentiment already exists for this user");

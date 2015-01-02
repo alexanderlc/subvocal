@@ -7,6 +7,8 @@ import info.subvocal.sentiment.entity.SentimentType;
  *  Handles persistence of sentiment entities.
  *
  *  Future implementation will write to MongoDB
+ *
+ *  todo consider using Sentiment object rather than separate params
  */
 public interface SentimentRepository {
 
