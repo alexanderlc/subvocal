@@ -106,4 +106,14 @@ public class Sentiment implements Comparable, Serializable {
 
         return this.getCreated().compareTo(sentiment.getCreated());
     }
+
+    @Override
+    public String toString() {
+        return "Sentiment{" +
+                "url='" + url + '\'' +
+                ", sentimentType=" + sentimentType +
+                ", created=" + created +
+                ", createdByUserId='" + createdByUserId + '\'' +
+                '}';
+    }
 }

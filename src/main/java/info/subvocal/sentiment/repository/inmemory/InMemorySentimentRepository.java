@@ -3,6 +3,8 @@ package info.subvocal.sentiment.repository.inmemory;
 import info.subvocal.sentiment.entity.Sentiment;
 import info.subvocal.sentiment.entity.SentimentType;
 import info.subvocal.sentiment.repository.SentimentRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
 
 import java.util.Map;
@@ -15,6 +17,8 @@ import java.util.concurrent.ConcurrentSkipListSet;
  */
 @Repository
 public class InMemorySentimentRepository implements SentimentRepository {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(InMemorySentimentRepository.class);
 
     private Map<String, Set<Sentiment>> sentimentDb = new ConcurrentHashMap<>();
 
@@ -40,6 +44,7 @@ public class InMemorySentimentRepository implements SentimentRepository {
         } else {
             // "save in db"
             sentimentDb.get(url).add(newSentiment);
+            LOGGER.info("Sentiment persisted: {}", newSentiment);
             return newSentiment;
         }
     }

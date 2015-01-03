@@ -69,24 +69,20 @@ public class ApiController {
             return new ResponseEntity<>("Invalid sentiment", HttpStatus.BAD_REQUEST);
         }
 
-        // The counter actor will exist for the duration of a single API method call
-
+        // The apiBrokerActor actor will exist for the duration of a single API method call
         // use the Spring Extension to create props for a named actor bean
-        ActorRef sentimentActor = actorSystem.actorOf(
-                SpringExtProvider.get(actorSystem).props("SentimentActor"), "sentimentActor_" + UUID.randomUUID());
+        // Add a random name to avoid any non-unique name exceptions
+        ActorRef apiBrokerActor = actorSystem.actorOf(
+                SpringExtProvider.get(actorSystem).props("ApiBrokerActor"), "apiBrokerActor_" + UUID.randomUUID());
 
         try {
             // Tell the sentiment actor to create the sentiment.
             // This is a fire and forget, the API is async and does not guarantee it will actually be created
-            sentimentActor.tell(new CreateSentiment(sentiment), null);
+            apiBrokerActor.tell(new CreateSentiment(sentiment), null);
             return new ResponseEntity<>("Create sentiment request received", HttpStatus.CREATED);
         } catch (Exception e) {
-            System.err.println("Failed to initiate sentiment request: " + e.getMessage());
+            LOGGER.error("Failed to initiate sentiment request: {}" + e);
             throw e;
-        } finally {
-            // we are done with the actor - stop it
-            // todo Note: stop will terminate all the children too - need to work out what to do now?
-//            actorSystem.stop(sentimentActor);
         }
     }
 
@@ -146,7 +142,7 @@ public class ApiController {
             throw e;
         } finally {
             // we are done with the actor - stop it
-            actorSystem.stop(counter);
+//            actorSystem.stop(counter);
         }
     }
 }
