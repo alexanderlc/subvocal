@@ -3,6 +3,8 @@ package info.subvocal.sentiment.repository;
 import info.subvocal.sentiment.entity.Sentiment;
 import info.subvocal.sentiment.entity.SentimentType;
 
+import java.util.List;
+
 /**
  *  Handles persistence of sentiment entities.
  *
@@ -15,4 +17,6 @@ public interface SentimentRepository {
     Sentiment createSentiment(String url, SentimentType sentimentType, String createdByUserId);
 
     int countSentimentForUrl(String url);
+
+    List<Sentiment> get10MostRecentSentimentsForUrl(String url);
 }

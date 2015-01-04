@@ -35,6 +35,11 @@ public class ApiBrokerActor extends UntypedActor {
             // the actor's job is now done, stop
             getContext().stop(getSelf());
 
+        } else if (message instanceof SentimentPersistenceActor.Get10Sentiments) {
+
+            // todo in future this will be called GetSentiments and SentimentActor will aggregate Get10 and GetCount
+            getContext().actorSelection("/user/sentimentPersistenceActor").forward(message, getContext());
+
         } else {
             unhandled(message);
         }

@@ -5,6 +5,7 @@ import akka.actor.ActorSystem;
 import akka.util.Timeout;
 import info.subvocal.sentiment.entity.Sentiment;
 import info.subvocal.web.akka.actor.CountingActor;
+import info.subvocal.web.akka.actor.SentimentPersistenceActor;
 import info.subvocal.web.akka.actor.message.CreateSentiment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,15 +15,18 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
+import scala.concurrent.duration.Duration;
 import scala.concurrent.duration.FiniteDuration;
 
 import javax.inject.Inject;
 import javax.validation.Valid;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -69,16 +73,10 @@ public class ApiController {
             return new ResponseEntity<>("Invalid sentiment", HttpStatus.BAD_REQUEST);
         }
 
-        // The apiBrokerActor actor will exist for the duration of a single API method call
-        // use the Spring Extension to create props for a named actor bean
-        // Add a random name to avoid any non-unique name exceptions
-        ActorRef apiBrokerActor = actorSystem.actorOf(
-                SpringExtProvider.get(actorSystem).props("ApiBrokerActor"), "apiBrokerActor_" + UUID.randomUUID());
-
         try {
             // Tell the sentiment actor to create the sentiment.
             // This is a fire and forget, the API is async and does not guarantee it will actually be created
-            apiBrokerActor.tell(new CreateSentiment(sentiment), null);
+            apiBrokerActor().tell(new CreateSentiment(sentiment), null);
             return new ResponseEntity<>("Create sentiment request received", HttpStatus.CREATED);
         } catch (Exception e) {
             LOGGER.error("Failed to initiate sentiment request: {}" + e);
@@ -86,34 +84,25 @@ public class ApiController {
         }
     }
 
-//    @ResponseBody
-//    @RequestMapping(value = "sentiments", method = GET)
-//    // todo use custom exception and add an exception handler
-//    public ResponseEntity<String> getSentiments(
-//            @RequestParam String url
-//    ) throws Exception {
+    @ResponseBody
+    @RequestMapping(value = "sentiments", method = GET)
+    public ResponseEntity<List<Sentiment>> getSentiments(
+            @RequestParam String url
+    ) throws Exception {
 
+        final Timeout t = new Timeout(Duration.create(5, TimeUnit.SECONDS));
 
+        Future<Object> futureResult
+                = ask(apiBrokerActor(), new SentimentPersistenceActor.Get10Sentiments(url), t); // using 1000ms timeout
 
-//        // The counter actor will exist for the duration of a single API method call
-//
-//        // use the Spring Extension to create props for a named actor bean
-//        ActorRef sentimentActor = actorSystem.actorOf(
-//                SpringExtProvider.get(actorSystem).props("SentimentActor"), "sentimentActor_" + UUID.randomUUID());
-//
-//        try {
-//            // Tell the sentiment actor to create the sentiment.
-//            // This is a fire and forget, the API is async and does not guarantee it will actually be created
-//            sentimentActor.tell(new CreateSentiment(sentiment), null);
-//            return new ResponseEntity<>("Create sentiment request received", HttpStatus.CREATED);
-//        } catch (Exception e) {
-//            System.err.println("Failed getting result: " + e.getMessage());
-//            throw e;
-//        } finally {
-//            // we are done with the actor - stop it
-//            actorSystem.stop(sentimentActor);
-//        }
-//    }
+        try {
+            List<Sentiment> result = (List<Sentiment>) Await.result(futureResult, Duration.create(5, TimeUnit.SECONDS));
+            return new ResponseEntity<>(result, HttpStatus.OK);
+        } catch (Exception e) {
+            System.err.println("Failed getting result: " + e.getMessage());
+            throw e;
+        }
+    }
 
     @ResponseBody
     @RequestMapping(value = "_count-once", method = GET)
@@ -144,5 +133,13 @@ public class ApiController {
             // we are done with the actor - stop it
 //            actorSystem.stop(counter);
         }
+    }
+
+    // The apiBrokerActor actor will exist for the duration of a single API method call
+    // use the Spring Extension to create props for a named actor bean
+    // Add a random name to avoid any non-unique name exceptions
+    private ActorRef apiBrokerActor() {
+        return actorSystem.actorOf(
+                SpringExtProvider.get(actorSystem).props("ApiBrokerActor"), "apiBrokerActor_" + UUID.randomUUID());
     }
 }

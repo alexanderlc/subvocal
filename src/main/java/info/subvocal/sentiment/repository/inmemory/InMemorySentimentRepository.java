@@ -7,6 +7,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
 
+import javax.validation.constraints.NotNull;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -56,5 +59,16 @@ public class InMemorySentimentRepository implements SentimentRepository {
         } else {
             return 0;
         }
+    }
+
+    @Override
+    public List<Sentiment> get10MostRecentSentimentsForUrl(@NotNull String url) {
+        // todo test this and show set sorted by date is correct direction
+        List<Sentiment> sentiments = new ArrayList<>(sentimentDb.get(url));
+        if (sentiments.size() > 10) {
+            sentiments = sentiments.subList(0, 10);
+        }
+
+        return sentiments;
     }
 }
