@@ -23,6 +23,18 @@
             <artifactId>akka-actor_2.10</artifactId>
             <version>2.3.8</version>
         </dependency>
+        <!-- required for cluster/remoting/pub-sub -->
+        <dependency>
+            <groupId>com.typesafe.akka</groupId>
+            <artifactId>akka-contrib_2.10</artifactId>
+            <version>2.3.8</version>
+        </dependency>
+        <!-- todo not used at the moment -->
+        <dependency>
+            <groupId>com.typesafe.akka</groupId>
+            <artifactId>akka-testkit_2.10</artifactId>
+            <version>2.3.8</version>
+        </dependency>
         <dependency>
             <groupId>javax.inject</groupId>
             <artifactId>javax.inject</artifactId>

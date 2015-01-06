@@ -7,6 +7,11 @@ subvocal
 mvn clean package && java -jar target/web-0.0.1.jar
 ```
 
+# Spring integration
+
+- Manage the app, and the spring mvn REST API
+- Allow injection of spring managed services into key actors.  In particular the worker actors
+
 # Todo
 
 - Use validation annotations
@@ -14,4 +19,5 @@ mvn clean package && java -jar target/web-0.0.1.jar
 
 # Acknowledgements
 
-Akka integration based on http://typesafe.com/activator/template/akka-java-spring
+- Akka integration based on http://typesafe.com/activator/template/akka-java-spring
+- Distributed workers based on https://github.com/typesafehub/activator-akka-distributed-workers-java
