@@ -7,6 +7,7 @@ import info.subvocal.sentiment.entity.Sentiment;
 import info.subvocal.web.akka.actor.CountingActor;
 import info.subvocal.web.akka.actor.SentimentPersistenceActor;
 import info.subvocal.web.akka.actor.message.CreateSentiment;
+import info.subvocal.web.akka.actor.worker.Master;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -47,6 +48,10 @@ public class ApiController {
     @Inject
     private ActorSystem actorSystem;
 
+    @Inject
+    private ActorRef frontend;
+
+    // todo invalid param usage should not be caught here and result in 400 response code
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public @ResponseBody String handleException(Exception e) throws Exception {
@@ -93,7 +98,7 @@ public class ApiController {
         final Timeout t = new Timeout(Duration.create(5, TimeUnit.SECONDS));
 
         Future<Object> futureResult
-                = ask(apiBrokerActor(), new SentimentPersistenceActor.Get10Sentiments(url), t); // using 1000ms timeout
+                = ask(apiBrokerActor(), new SentimentPersistenceActor.Get10Sentiments(url), t);
 
         try {
             List<Sentiment> result = (List<Sentiment>) Await.result(futureResult, Duration.create(5, TimeUnit.SECONDS));
@@ -102,6 +107,30 @@ public class ApiController {
             System.err.println("Failed getting result: " + e.getMessage());
             throw e;
         }
+    }
+
+    @ResponseBody
+    @RequestMapping(value = "_square", method = GET)
+    public ResponseEntity<Long> square(
+            @RequestParam Integer operand
+    ) throws Exception {
+
+        final Timeout t = new Timeout(Duration.create(5, TimeUnit.SECONDS));
+
+        Future<Object> futureResult
+                = ask(frontend, new Master.Work(nextWorkId(), operand), t);
+
+        try {
+            Long result = (Long) Await.result(futureResult, Duration.create(10, TimeUnit.SECONDS));
+            return new ResponseEntity<>(result, HttpStatus.OK);
+        } catch (Exception e) {
+            System.err.println("Failed getting result: " + e.getMessage());
+            throw e;
+        }
+    }
+
+    private String nextWorkId() {
+        return UUID.randomUUID().toString();
     }
 
     @ResponseBody

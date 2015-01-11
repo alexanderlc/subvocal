@@ -14,6 +14,7 @@ mvn clean package && java -jar target/web-0.0.1.jar
 
 # Todo
 
+- seed nodes and remove manual cluster joining
 - Use validation annotations
 - Call system actor shutdown and terminate when the spring context is shutting down
 

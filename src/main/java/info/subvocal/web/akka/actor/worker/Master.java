@@ -1,4 +1,4 @@
-package info.subvocal.web.akka.actor;
+package info.subvocal.web.akka.actor.worker;
 
 import akka.actor.ActorRef;
 import akka.actor.Cancellable;
@@ -32,6 +32,28 @@ import static info.subvocal.web.akka.actor.worker.MasterWorkerProtocol.*;
  *
  * Source modified from:
  * https://github.com/typesafehub/activator-akka-distributed-workers-java/blob/master/src/main/java/worker/Master.java
+ *
+ * Workers register itself to the master with RegisterWorker. Each worker has an unique identifier and the master keeps
+ * track of the workers, including current ActorRef (sender of RegisterWorker message) that can be used for sending
+ * notifications to the worker. This ActorRef is not a direct link to the worker actor, but messages sent to it will be
+ * delivered to the worker. When using the cluster client messages are are tunneled via the receptionist on some node in
+ * the cluster to avoid inbound connections from other cluster nodes to the client.
+ *
+ * When the master receives Work from front end it adds the work item to the queue of pending work and notifies idle
+ * workers with WorkIsReady message.
+ *
+ * To be able to restore same state in case of fail over to a standby master actor the changes (domain events) are
+ * stored in an append only transaction log and can be replayed when standby actor is started. This event sourcing is
+ * not implemented in the example yet. The Eventsourced library can be used for that. When the domain event has been
+ * saved successfully the master replies with an acknowledgement message (Ack) to the front end. The master also keeps
+ * track of accepted work identifiers to be able to discard duplicates sent from the front end.
+ *
+ * When a worker receives WorkIsReady it sends back WorkerRequestsWork to the master, which hands out the work, if any,
+ * to the worker. The master keeps track of that the worker is busy and expect a result within a deadline. For long
+ * running jobs the worker could send progress messages, but that is not implemented in the example.
+ *
+ * When the worker sends WorkIsDone the master updates its state of the worker and sends acknowledgement back to the
+ * worker. This message must also be idempotent as the worker will re-send if it doesn't receive the acknowledgement.
  */
 public class Master extends UntypedActor {
     public static String ResultsTopic = "results";
@@ -79,6 +101,8 @@ public class Master extends UntypedActor {
 
     @Override
     public void onReceive(Object message) {
+//        log.info("Message received by Master" + message);
+
         if (message instanceof RegisterWorker) {
             RegisterWorker msg =
                     (RegisterWorker) message;
@@ -150,7 +174,7 @@ public class Master extends UntypedActor {
             if (workIds.contains(work.workId)) {
                 getSender().tell(new Ack(work.workId), getSelf());
             } else {
-                log.debug("Accepted work: {}", work);
+                log.info("Accepted work: {}", work);
                 // TODO store in Eventsourced
                 pendingWork.add(work);
                 workIds.add(work.workId);

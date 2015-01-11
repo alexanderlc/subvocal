@@ -8,6 +8,7 @@ import akka.dispatch.Mapper;
 import akka.dispatch.Recover;
 import akka.util.Timeout;
 import info.subvocal.web.akka.actor.message.CreateSentiment;
+import info.subvocal.web.akka.actor.worker.Master;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Scope;
@@ -49,12 +50,14 @@ public class ApiBrokerActor extends UntypedActor {
         LOGGER.info("ApiBrokerActor: Received message: {}", message);
 
         if (message instanceof CreateSentiment
-                || message instanceof SentimentPersistenceActor.Get10Sentiments) {
+                || message instanceof SentimentPersistenceActor.Get10Sentiments
+                || message instanceof SquareRequest
+                || message instanceof Master.Work) {
 
             forwardWork(message);
 
             // the actor's job is now done, stop
-            getContext().stop(getSelf());
+//            getContext().stop(getSelf());
 
         } else {
             unhandled(message);
@@ -66,6 +69,8 @@ public class ApiBrokerActor extends UntypedActor {
      * @param message a supported API request
      */
     private void forwardWork(Object message) {
+
+        LOGGER.info("Forwarding message to master for distribution");
 
         // work is sent via the master actor, f being a future message
         Future<Object> f =
@@ -93,6 +98,20 @@ public class ApiBrokerActor extends UntypedActor {
         pipe(res, ec).to(getSender());
     }
 
+    // todo create an ApiProtocol class structure
+
+    public static class SquareRequest implements Serializable {
+        private int operand;
+
+        public SquareRequest(int operand) {
+            this.operand = operand;
+        }
+
+        public int getOperand() {
+            return operand;
+        }
+    }
+
     public static final class Ok implements Serializable {
         private Ok() {}
 
@@ -106,7 +125,7 @@ public class ApiBrokerActor extends UntypedActor {
         public String toString() {
             return "Ok";
         }
-    };
+    }
 
     public static final class NotOk implements Serializable {
         private NotOk() {}
@@ -121,5 +140,5 @@ public class ApiBrokerActor extends UntypedActor {
         public String toString() {
             return "NotOk";
         }
-    };
+    }
 }

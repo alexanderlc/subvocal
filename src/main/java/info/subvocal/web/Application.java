@@ -1,5 +1,7 @@
 package info.subvocal.web;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;
@@ -25,7 +27,13 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter
                 VelocityAutoConfiguration.class})
 public class Application extends WebMvcConfigurerAdapter {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(Application.class);
+
     public static void main(String[] args) throws Exception {
         SpringApplication.run(Application.class, args);
     }
+
+
+
+
 }
