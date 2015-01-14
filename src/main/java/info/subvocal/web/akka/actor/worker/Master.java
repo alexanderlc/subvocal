@@ -101,7 +101,7 @@ public class Master extends UntypedActor {
 
     @Override
     public void onReceive(Object message) {
-//        log.info("Message received by Master" + message);
+        log.debug("Message received by Master" + message + " from " + getSender());
 
         if (message instanceof RegisterWorker) {
             RegisterWorker msg =
@@ -112,7 +112,7 @@ public class Master extends UntypedActor {
                 // todo presumably this is in case the worker restarted/died?
                 workers.put(workerId, workers.get(workerId).copyWithRef(getSender()));
             } else {
-                log.debug("Worker registered: {}", workerId);
+                log.info("Worker registered: {}", workerId);
                 workers.put(workerId, new WorkerState(getSender(),Idle.instance));
                 if (!pendingWork.isEmpty())
                     getSender().tell(WorkIsReady.getInstance(), getSelf());
@@ -125,7 +125,7 @@ public class Master extends UntypedActor {
                 WorkerState state = workers.get(workerId);
                 if (state != null && state.status.isIdle()) {
                     Work work = pendingWork.remove();
-                    log.debug("Giving worker {} some work {}", workerId, work.job);
+                    log.info("Giving worker {} some work {}", workerId, work.job);
                     // TODO store in Eventsourced
                     getSender().tell(work, getSelf());
                     workers.put(workerId, state.copyWithStatus(new Busy(work, workTimeout.fromNow())));
@@ -140,7 +140,7 @@ public class Master extends UntypedActor {
             if (state != null && state.status.isBusy() && state.status.getWork().workId.equals(workId)) {
                 Work work = state.status.getWork();
                 Object result = msg.result;
-                log.debug("Work is done: {} => {} by worker {}", work, result, workerId);
+                log.info("Work is done: {} => {} by worker {}", work, result, workerId);
                 // TODO store in Eventsourced
                 workers.put(workerId, state.copyWithStatus(Idle.instance));
                 mediator.tell(new DistributedPubSubMediator.Publish(ResultsTopic,
