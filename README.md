@@ -14,7 +14,6 @@ mvn clean package && java -jar target/web-0.0.1.jar
 
 # Todo
 
-- workers should only register for work they can complete
 - Add create sentiment as a worker task
 - Get sentiment summary as a worker task
 - Frontend app to use the API
@@ -26,6 +25,7 @@ mvn clean package && java -jar target/web-0.0.1.jar
 
 # Done
 - revert to a multiple actor system context
+- workers should only register for work they can complete
 
 # Acknowledgements
 

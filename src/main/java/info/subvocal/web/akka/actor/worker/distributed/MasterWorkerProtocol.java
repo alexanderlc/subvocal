@@ -1,4 +1,6 @@
-package info.subvocal.web.akka.actor.worker;
+package info.subvocal.web.akka.actor.worker.distributed;
+
+import info.subvocal.web.akka.actor.message.Work;
 
 import java.io.Serializable;
 
@@ -10,43 +12,54 @@ public abstract class MasterWorkerProtocol {
 
     // Messages from/to Workers
 
+    /**
+     * Workers can only register for a single WorkType
+     */
     public static final class RegisterWorker implements Serializable {
         public final String workerId;
+        public final Work.WorkType workType;
 
-        public RegisterWorker(String workerId) {
+        public RegisterWorker(String workerId, Work.WorkType workType) {
             this.workerId = workerId;
+            this.workType = workType;
         }
 
         @Override
         public String toString() {
             return "RegisterWorker{" +
                     "workerId='" + workerId + '\'' +
+                    "workType='" + workType + '\'' +
                     '}';
         }
     }
 
     public static final class WorkerRequestsWork implements Serializable {
         public final String workerId;
+        public final Work.WorkType workType;
 
-        public WorkerRequestsWork(String workerId) {
+        public WorkerRequestsWork(String workerId, Work.WorkType workType) {
             this.workerId = workerId;
+            this.workType = workType;
         }
 
         @Override
         public String toString() {
             return "WorkerRequestsWork{" +
                     "workerId='" + workerId + '\'' +
+                    "workType='" + workType + '\'' +
                     '}';
         }
     }
 
     public static final class WorkIsDone implements Serializable {
         public final String workerId;
+        public final Work.WorkType workType;
         public final String workId;
         public final Object result;
 
-        public WorkIsDone(String workerId, String workId, Object result) {
+        public WorkIsDone(String workerId, Work.WorkType workType, String workId, Object result) {
             this.workerId = workerId;
+            this.workType = workType;
             this.workId = workId;
             this.result = result;
         }
@@ -63,10 +76,12 @@ public abstract class MasterWorkerProtocol {
 
     public static final class WorkFailed implements Serializable {
         public final String workerId;
+        public final Work.WorkType workType;
         public final String workId;
 
-        public WorkFailed(String workerId, String workId) {
+        public WorkFailed(String workerId, Work.WorkType workType, String workId) {
             this.workerId = workerId;
+            this.workType = workType;
             this.workId = workId;
         }
 

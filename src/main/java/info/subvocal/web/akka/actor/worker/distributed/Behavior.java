@@ -1,4 +1,4 @@
-package info.subvocal.web.akka.actor.worker;
+package info.subvocal.web.akka.actor.worker.distributed;
 
 import akka.japi.Procedure;
 

@@ -8,7 +8,7 @@ import akka.dispatch.Mapper;
 import akka.dispatch.Recover;
 import akka.util.Timeout;
 import info.subvocal.web.akka.actor.message.Work;
-import info.subvocal.web.akka.actor.worker.Master;
+import info.subvocal.web.akka.actor.worker.distributed.Master;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Scope;

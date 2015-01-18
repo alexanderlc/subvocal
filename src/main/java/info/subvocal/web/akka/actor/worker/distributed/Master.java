@@ -1,4 +1,4 @@
-package info.subvocal.web.akka.actor.worker;
+package info.subvocal.web.akka.actor.worker.distributed;
 
 import akka.actor.ActorRef;
 import akka.actor.Cancellable;
@@ -21,12 +21,6 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
-
-import static info.subvocal.web.akka.actor.worker.MasterWorkerProtocol.RegisterWorker;
-import static info.subvocal.web.akka.actor.worker.MasterWorkerProtocol.WorkFailed;
-import static info.subvocal.web.akka.actor.worker.MasterWorkerProtocol.WorkIsDone;
-import static info.subvocal.web.akka.actor.worker.MasterWorkerProtocol.WorkIsReady;
-import static info.subvocal.web.akka.actor.worker.MasterWorkerProtocol.WorkerRequestsWork;
 
 /**
  * The heart of the solution is the Master actor that manages outstanding work and notifies registered workers when new
@@ -59,6 +53,9 @@ import static info.subvocal.web.akka.actor.worker.MasterWorkerProtocol.WorkerReq
  *
  * When the worker sends WorkIsDone the master updates its state of the worker and sends acknowledgement back to the
  * worker. This message must also be idempotent as the worker will re-send if it doesn't receive the acknowledgement.
+ *
+ * Update: workers now register for a single WorkType, they can only perform work of these type.
+ * Master now has to keep track of Workers and Work by WorkType.
  */
 public class Master extends UntypedActor {
     public static String ResultsTopic = "results";
@@ -78,17 +75,25 @@ public class Master extends UntypedActor {
     private final LoggingAdapter log = Logging.getLogger(getContext().system(), this);
     private final Cancellable cleanupTask;
 
-    // all registered workers and their state
-    private HashMap<String, WorkerState> workers = new HashMap<String, WorkerState>();
+    // all registered workers and their state, by WorkType
+    private Map<Work.WorkType, Map<String, WorkerState>> workersByWorkType;
 
-    // outstanding queue of work
-    private Queue<Work> pendingWork = new LinkedList<Work>();
+    // outstanding queue of work by WorkType
+    private Map<Work.WorkType, Queue<Work>> pendingWorkByWorkType;
 
     // complementary to the pendingWork, this set allows exists check on a workId
     private Set<String> workIds = new LinkedHashSet<String>();
 
     public Master(FiniteDuration workTimeout) {
         this.workTimeout = workTimeout;
+
+        // setup maps by work type
+        this.workersByWorkType = new HashMap<>();
+        this.pendingWorkByWorkType = new HashMap<>();
+        for (Work.WorkType workType : Work.WorkType.values()) {
+            this.workersByWorkType.put(workType, new HashMap<String, WorkerState>());
+            this.pendingWorkByWorkType.put(workType, new LinkedList<Work>());
+        }
 
         // The master actor is made available for both front end and workers by registering itself
         // in the DistributedPubSubMediator.
@@ -108,46 +113,51 @@ public class Master extends UntypedActor {
     public void onReceive(Object message) {
         log.debug("Message received by Master" + message + " from " + getSender());
 
-        if (message instanceof RegisterWorker) {
-            RegisterWorker msg =
-                    (RegisterWorker) message;
+        if (message instanceof MasterWorkerProtocol.RegisterWorker) {
+            MasterWorkerProtocol.RegisterWorker msg =
+                    (MasterWorkerProtocol.RegisterWorker) message;
             String workerId = msg.workerId;
-            if (workers.containsKey(workerId)) {
+            Work.WorkType workType = msg.workType;
+            if (workersByWorkType.get(workType).containsKey(workerId)) {
                 // for existing workers update our actor ref each message
-                // todo presumably this is in case the worker restarted/died?
-                workers.put(workerId, workers.get(workerId).copyWithRef(getSender()));
+                // (presumably this is in case the worker restarted/died?)
+                workersByWorkType.get(workType)
+                        .put(workerId, workersByWorkType.get(workType).get(workerId).copyWithRef(getSender()));
             } else {
-                log.info("Worker registered: {}", workerId);
-                workers.put(workerId, new WorkerState(getSender(),Idle.instance));
-                if (!pendingWork.isEmpty())
-                    getSender().tell(WorkIsReady.getInstance(), getSelf());
+                log.info("Worker registered for {}: {}", workType, workerId);
+                workersByWorkType.get(workType).put(workerId, new WorkerState(getSender(), Idle.instance));
+                if (!pendingWorkByWorkType.get(workType).isEmpty())
+                    getSender().tell(MasterWorkerProtocol.WorkIsReady.getInstance(), getSelf());
             }
         }
-        else if (message instanceof WorkerRequestsWork) {
-            WorkerRequestsWork msg = (WorkerRequestsWork) message;
+        else if (message instanceof MasterWorkerProtocol.WorkerRequestsWork) {
+            MasterWorkerProtocol.WorkerRequestsWork msg = (MasterWorkerProtocol.WorkerRequestsWork) message;
             String workerId = msg.workerId;
-            if (!pendingWork.isEmpty()) {
-                WorkerState state = workers.get(workerId);
+            Work.WorkType workType = msg.workType;
+            if (!pendingWorkByWorkType.get(workType).isEmpty()) {
+                WorkerState state = workersByWorkType.get(workType).get(workerId);
                 if (state != null && state.status.isIdle()) {
-                    Work work = pendingWork.remove();
-                    log.info("Giving worker {} some work {}", workerId, work.toString());
+                    Work work = pendingWorkByWorkType.get(workType).remove();
+                    log.info("Giving worker {} some work {} of type {}", workerId, work.toString(), workType);
                     // TODO store in Eventsourced
                     getSender().tell(work, getSelf());
-                    workers.put(workerId, state.copyWithStatus(new Busy(work, workTimeout.fromNow())));
+                    workersByWorkType.get(workType)
+                            .put(workerId, state.copyWithStatus(new Busy(work, workTimeout.fromNow())));
                 }
             }
         }
-        else if (message instanceof WorkIsDone) {
-            WorkIsDone msg = (WorkIsDone) message;
+        else if (message instanceof MasterWorkerProtocol.WorkIsDone) {
+            MasterWorkerProtocol.WorkIsDone msg = (MasterWorkerProtocol.WorkIsDone) message;
             String workerId = msg.workerId;
+            Work.WorkType workType = msg.workType;
             String workId = msg.workId;
-            WorkerState state = workers.get(workerId);
+            WorkerState state = workersByWorkType.get(workType).get(workerId);
             if (state != null && state.status.isBusy() && state.status.getWork().workId.equals(workId)) {
                 Work work = state.status.getWork();
                 Object result = msg.result;
                 log.info("Work is done: {} => {} by worker {}", work, result, workerId);
                 // TODO store in Eventsourced
-                workers.put(workerId, state.copyWithStatus(Idle.instance));
+                workersByWorkType.get(workType).put(workerId, state.copyWithStatus(Idle.instance));
                 mediator.tell(new DistributedPubSubMediator.Publish(ResultsTopic,
                         new WorkResult(workId, result)), getSelf());
                 getSender().tell(new Ack(workId), getSelf());
@@ -158,19 +168,20 @@ public class Master extends UntypedActor {
                 }
             }
         }
-        else if (message instanceof WorkFailed) {
-            WorkFailed msg = (WorkFailed) message;
+        else if (message instanceof MasterWorkerProtocol.WorkFailed) {
+            MasterWorkerProtocol.WorkFailed msg = (MasterWorkerProtocol.WorkFailed) message;
             String workerId = msg.workerId;
+            Work.WorkType workType = msg.workType;
             String workId = msg.workId;
-            WorkerState state = workers.get(workerId);
+            WorkerState state = workersByWorkType.get(workType).get(workerId);
             if (state != null && state.status.isBusy() && state.status.getWork().workId.equals(workId)) {
                 log.info("Work failed: {}", state.status.getWork());
                 // TODO store in Eventsourced
 
                 // allow the worker to take more work and retry the work item (until cleanup occurs)
-                workers.put(workerId, state.copyWithStatus(Idle.instance));
-                pendingWork.add(state.status.getWork());
-                notifyWorkers();
+                workersByWorkType.get(workType).put(workerId, state.copyWithStatus(Idle.instance));
+                pendingWorkByWorkType.get(workType).add(state.status.getWork());
+                notifyWorkers(workType);
             }
         }
         else if (message instanceof Work) {
@@ -181,10 +192,10 @@ public class Master extends UntypedActor {
             } else {
                 log.info("Accepted work: {}", work);
                 // TODO store in Eventsourced
-                pendingWork.add(work);
+                pendingWorkByWorkType.get(work.getWorkType()).add(work);
                 workIds.add(work.workId);
                 getSender().tell(new Ack(work.workId), getSelf());
-                notifyWorkers();
+                notifyWorkers(work.getWorkType());
             }
         }
         else if (message == CleanupTick) {
@@ -192,20 +203,22 @@ public class Master extends UntypedActor {
             // review current work for items that are overdue
             // todo looks to try the work and remove the worker from the pool - does this risk letting bad work take out all the workers?
 
-            Iterator<Map.Entry<String, WorkerState>> iterator =
-                    workers.entrySet().iterator();
-            while (iterator.hasNext()) {
-                Map.Entry<String, WorkerState> entry = iterator.next();
-                String workerId = entry.getKey();
-                WorkerState state = entry.getValue();
-                if (state.status.isBusy()) {
-                    if (state.status.getDeadLine().isOverdue()) {
-                        Work work = state.status.getWork();
-                        log.info("Work timed out: {}", work);
-                        // TODO store in Eventsourced
-                        iterator.remove();
-                        pendingWork.add(work);
-                        notifyWorkers();
+            for (Work.WorkType workType : workersByWorkType.keySet()) {
+                Iterator<Map.Entry<String, WorkerState>> iterator =
+                        workersByWorkType.get(workType).entrySet().iterator();
+                while (iterator.hasNext()) {
+                    Map.Entry<String, WorkerState> entry = iterator.next();
+                    String workerId = entry.getKey();
+                    WorkerState state = entry.getValue();
+                    if (state.status.isBusy()) {
+                        if (state.status.getDeadLine().isOverdue()) {
+                            Work work = state.status.getWork();
+                            log.info("Work timed out: {}", work);
+                            // TODO store in Eventsourced
+                            iterator.remove();
+                            pendingWorkByWorkType.get(workType).add(work);
+                            notifyWorkers(workType);
+                        }
                     }
                 }
             }
@@ -215,12 +228,12 @@ public class Master extends UntypedActor {
         }
     }
 
-    private void notifyWorkers() {
-        if (!pendingWork.isEmpty()) {
+    private void notifyWorkers(Work.WorkType workType) {
+        if (!pendingWorkByWorkType.get(workType).isEmpty()) {
             // could pick a few random instead of all
-            for (WorkerState state: workers.values()) {
+            for (WorkerState state: workersByWorkType.get(workType).values()) {
                 if (state.status.isIdle())
-                    state.ref.tell(WorkIsReady.getInstance(), getSelf());
+                    state.ref.tell(MasterWorkerProtocol.WorkIsReady.getInstance(), getSelf());
             }
         }
     }

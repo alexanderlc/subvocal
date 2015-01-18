@@ -77,25 +77,17 @@ public class ApiController {
 
     @ResponseBody
     @RequestMapping(value = "sentiment", method = POST)
-    // todo use custom exception and add an exception handler
     public ResponseEntity<String> createSentiment(
             @Valid @RequestBody Sentiment sentiment,
-            BindingResult bindingResult
-    ) throws Exception {
+            BindingResult bindingResult) {
 
         if (bindingResult.hasErrors()) {
             return new ResponseEntity<>("Invalid sentiment", HttpStatus.BAD_REQUEST);
         }
 
-        try {
-            // Tell the sentiment actor to create the sentiment.
-            // This is a fire and forget, the API is async and does not guarantee it will actually be created
-            frontend.tell(new Work.CreateSentiment(nextWorkId(), sentiment), null);
-            return new ResponseEntity<>("Create sentiment request received", HttpStatus.CREATED);
-        } catch (Exception e) {
-            LOGGER.error("Failed to initiate sentiment request: {}" + e);
-            throw e;
-        }
+        return handleResponseFromApiBroker(
+                ask(frontend, new Work.CreateSentiment(nextWorkId(), sentiment), askTimeOut())
+        );
     }
 
     @ResponseBody

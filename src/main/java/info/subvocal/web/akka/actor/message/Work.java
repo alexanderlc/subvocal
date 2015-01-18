@@ -15,11 +15,17 @@ public abstract class Work implements Serializable {
         this.workId = workId;
     }
 
+    public abstract WorkType getWorkType();
+
     @Override
     public String toString() {
         return "Work{" +
                 "workId='" + workId + '\'' +
                 '}';
+    }
+
+    public enum WorkType {
+        SQUARE, CREATE_SENTIMENT
     }
 
     public static final class CreateSentiment extends Work {
@@ -34,6 +40,11 @@ public abstract class Work implements Serializable {
         public Sentiment getSentiment() {
             return sentiment;
         }
+
+        @Override
+        public WorkType getWorkType() {
+            return WorkType.CREATE_SENTIMENT;
+        }
     }
 
     public static final class Square extends Work {
@@ -46,6 +57,11 @@ public abstract class Work implements Serializable {
 
         public int getOperand() {
             return operand;
+        }
+
+        @Override
+        public WorkType getWorkType() {
+            return WorkType.SQUARE;
         }
     }
 }

@@ -6,15 +6,17 @@ import akka.actor.ActorSystem;
 import akka.actor.Address;
 import akka.actor.PoisonPill;
 import akka.actor.Props;
+import akka.actor.UntypedActor;
 import akka.cluster.Cluster;
 import akka.contrib.pattern.ClusterClient;
 import akka.contrib.pattern.ClusterSingletonManager;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import info.subvocal.web.akka.actor.ApiBrokerActor;
-import info.subvocal.web.akka.actor.worker.Master;
-import info.subvocal.web.akka.actor.worker.WorkExecutor;
-import info.subvocal.web.akka.actor.worker.Worker;
+import info.subvocal.web.akka.actor.worker.SentimentWorker;
+import info.subvocal.web.akka.actor.worker.SquareWorker;
+import info.subvocal.web.akka.actor.worker.distributed.Master;
+import info.subvocal.web.akka.actor.worker.distributed.Worker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
@@ -158,8 +160,27 @@ class AkkaConfig {
         ActorRef clusterClient = system.actorOf(ClusterClient.defaultProps(initialContacts),
                 "clusterClient");
 
-        // create the worker - they manage their own executor
-        system.actorOf(Worker.props(clusterClient, Props.create(WorkExecutor.class)), "worker");
+        // create the workers - they manage their own executor
+        system.actorOf(
+                workerProps(
+                        SquareWorker.class,
+                        clusterClient,
+                        workerExecutorProps(SquareWorker.SquareWorkerExecutor.class)),
+                "square-worker1");
+
+        system.actorOf(
+                workerProps(
+                        SquareWorker.class,
+                        clusterClient,
+                        workerExecutorProps(SquareWorker.SquareWorkerExecutor.class)),
+                "square-worker2");
+
+        system.actorOf(
+                workerProps(
+                        SentimentWorker.class,
+                        clusterClient,
+                        workerExecutorProps(SentimentWorker.SentimentWorkerExecutor.class)),
+                "sentiment-worker1");
 
         return system;
     }
@@ -168,13 +189,16 @@ class AkkaConfig {
         LOGGER.info("startFrontend called");
         // create the frontend actor system
         ActorSystem system = ActorSystem.create(systemName);
-
         Cluster.get(system).join(joinAddress);
+        return system.actorOf(Props.create(ApiBrokerActor.class), "frontend");
+    }
 
-        ActorRef frontend = system.actorOf(Props.create(ApiBrokerActor.class), "frontend");
-//        system.actorOf(Props.create(WorkProducer.class, frontend), "producer");
-//        system.actorOf(Props.create(WorkResultConsumer.class), "consumer");
+    private static Props workerExecutorProps(Class<? extends UntypedActor> workExecutorClass) {
+        return Props.create(workExecutorClass);
+    }
 
-        return frontend;
+    private static Props workerProps(Class<? extends Worker> workerClass, ActorRef clusterClient,
+                                     Props workExecutorProps) {
+        return Props.create(workerClass, clusterClient, workExecutorProps, Duration.create(10, "seconds"));
     }
 }

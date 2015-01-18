@@ -1,4 +1,4 @@
-package info.subvocal.web.akka.actor.worker;
+package info.subvocal.web.akka.actor.worker.distributed;
 
 import akka.actor.ActorInitializationException;
 import akka.actor.ActorRef;
@@ -25,12 +25,12 @@ import static akka.actor.SupervisorStrategy.Directive;
 import static akka.actor.SupervisorStrategy.escalate;
 import static akka.actor.SupervisorStrategy.restart;
 import static akka.actor.SupervisorStrategy.stop;
-import static info.subvocal.web.akka.actor.worker.Master.Ack;
-import static info.subvocal.web.akka.actor.worker.MasterWorkerProtocol.RegisterWorker;
-import static info.subvocal.web.akka.actor.worker.MasterWorkerProtocol.WorkFailed;
-import static info.subvocal.web.akka.actor.worker.MasterWorkerProtocol.WorkIsDone;
-import static info.subvocal.web.akka.actor.worker.MasterWorkerProtocol.WorkIsReady;
-import static info.subvocal.web.akka.actor.worker.MasterWorkerProtocol.WorkerRequestsWork;
+import static info.subvocal.web.akka.actor.worker.distributed.Master.Ack;
+import static info.subvocal.web.akka.actor.worker.distributed.MasterWorkerProtocol.RegisterWorker;
+import static info.subvocal.web.akka.actor.worker.distributed.MasterWorkerProtocol.WorkFailed;
+import static info.subvocal.web.akka.actor.worker.distributed.MasterWorkerProtocol.WorkIsDone;
+import static info.subvocal.web.akka.actor.worker.distributed.MasterWorkerProtocol.WorkIsReady;
+import static info.subvocal.web.akka.actor.worker.distributed.MasterWorkerProtocol.WorkerRequestsWork;
 
 /**
  * We should support many worker nodes and we assume that they can be unstable. Therefore we don't let the worker nodes
@@ -48,18 +48,10 @@ import static info.subvocal.web.akka.actor.worker.MasterWorkerProtocol.WorkerReq
  * These are separate behaviours that handle different sets of messages that can occur between the master,
  * the worker and the work executor.
  * The behaviours are switched using the actor context become() method.
+ *
+ * Update: Worker is abstract. Subclasses can work on a single WorkType
  */
-public class Worker extends UntypedActor {
-
-    // todo thus far this code is in the AkkaConfig for the other actors
-    public static Props props(ActorRef clusterClient, Props workExecutorProps, FiniteDuration registerInterval) {
-        return Props.create(Worker.class, clusterClient, workExecutorProps, registerInterval);
-    }
-
-    // todo thus far this code is in the AkkaConfig for the other actors
-    public static Props props(ActorRef clusterClient, Props workExecutorProps) {
-        return props(clusterClient, workExecutorProps, Duration.create(10, "seconds"));
-    }
+public abstract class Worker extends UntypedActor {
 
     /**
      * Actor through which the worker will communicate to the master (and therefore the source of the work)
@@ -98,11 +90,14 @@ public class Worker extends UntypedActor {
         this.clusterClient = clusterClient;
         this.workExecutorProps = workExecutorProps;
         this.registerInterval = registerInterval;
-        this.workExecutor = getContext().watch(getContext().actorOf(workExecutorProps, "exec"));
+        this.workExecutor = getContext().watch(getContext().actorOf(workExecutorProps,
+                getSelf().path().name() + "exec"));
         this.registerTask = getContext().system().scheduler().schedule(Duration.Zero(), registerInterval,
-                clusterClient, new SendToAll("/user/master/active", new RegisterWorker(workerId)),
+                clusterClient, new SendToAll("/user/master/active", new RegisterWorker(workerId, getWorkType())),
                 getContext().dispatcher(), getSelf());
     }
+
+    public abstract Work.WorkType getWorkType();
 
     private String workId() {
         if (currentWorkId != null)
@@ -129,7 +124,7 @@ public class Worker extends UntypedActor {
                             return stop();
                         else if (t instanceof Exception) {
                             if (currentWorkId != null) {
-                                sendToMaster(new WorkFailed(workerId, workId()));
+                                sendToMaster(new WorkFailed(workerId, getWorkType(), workId()));
                             }
                             getContext().become(idle);
                             return restart();
@@ -163,7 +158,7 @@ public class Worker extends UntypedActor {
     private final Behavior idle = new Behavior() {
         public void apply(Object message) {
             if (message instanceof MasterWorkerProtocol.WorkIsReady)
-                sendToMaster(new MasterWorkerProtocol.WorkerRequestsWork(workerId));
+                sendToMaster(new MasterWorkerProtocol.WorkerRequestsWork(workerId, getWorkType()));
             else if (Work.class.isAssignableFrom(message.getClass())) {
                 Work work = (Work) message;
                 log.info("Got work: {}", work.toString());
@@ -183,7 +178,7 @@ public class Worker extends UntypedActor {
             if (message instanceof WorkComplete) {
                 Object result = ((WorkComplete) message).result;
                 log.info("Work is complete. Result {}.", result);
-                sendToMaster(new WorkIsDone(workerId, workId(), result));
+                sendToMaster(new WorkIsDone(workerId, getWorkType(), workId(), result));
                 getContext().setReceiveTimeout(Duration.create(5, "seconds"));
                 getContext().become(waitForWorkIsDoneAck(result));
             }
@@ -205,13 +200,13 @@ public class Worker extends UntypedActor {
         return new Behavior() {
             public void apply(Object message) {
                 if (message instanceof Ack && ((Ack) message).workId.equals(workId())) {
-                    sendToMaster(new WorkerRequestsWork(workerId));
+                    sendToMaster(new WorkerRequestsWork(workerId, getWorkType()));
                     getContext().setReceiveTimeout(Duration.Undefined());
                     getContext().become(idle);
                 }
                 else if (message instanceof ReceiveTimeout) {
                     log.info("No ack from master, retrying (" + workerId + " -> " + workId() + ")");
-                    sendToMaster(new WorkIsDone(workerId, workId(), result));
+                    sendToMaster(new WorkIsDone(workerId, getWorkType(), workId(), result));
                 }
                 else {
                     unhandled(message);
