@@ -15,7 +15,7 @@ import scala.concurrent.duration.FiniteDuration;
 public class SquareWorker extends Worker {
 
     public SquareWorker(ActorRef clusterClient, Props workExecutorProps, FiniteDuration registerInterval) {
-        super(clusterClient, workExecutorProps, registerInterval);
+        super();
     }
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SquareWorker.class);

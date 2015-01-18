@@ -5,7 +5,6 @@ import akka.actor.ActorRef;
 import akka.actor.Cancellable;
 import akka.actor.DeathPactException;
 import akka.actor.OneForOneStrategy;
-import akka.actor.Props;
 import akka.actor.ReceiveTimeout;
 import akka.actor.SupervisorStrategy;
 import akka.actor.Terminated;
@@ -18,6 +17,8 @@ import info.subvocal.web.akka.actor.message.Work;
 import scala.concurrent.duration.Duration;
 import scala.concurrent.duration.FiniteDuration;
 
+import javax.annotation.PostConstruct;
+import javax.inject.Inject;
 import java.io.Serializable;
 import java.util.UUID;
 
@@ -56,27 +57,21 @@ public abstract class Worker extends UntypedActor {
     /**
      * Actor through which the worker will communicate to the master (and therefore the source of the work)
      */
-    private final ActorRef clusterClient;
-
-    /**
-     * Properties for the worker's child, the work executor
-     */
-    private final Props workExecutorProps;
+    @Inject
+    private ActorRef clusterClient;
 
     /**
      * Ref to the worker's child, the actor that actually does the work
+     *
+     * todo something here to remove this
      */
-    private final ActorRef workExecutor;
-
-    /**
-     * The time between worker registrations with the master
-     */
-    private final FiniteDuration registerInterval;
+    @Inject
+    private ActorRef sentimentWorkerExecutor;
 
     /**
      * A scheduled tasks to regularly re-register with the master
      */
-    private final Cancellable registerTask;
+    private Cancellable registerTask;
 
     private LoggingAdapter log = Logging.getLogger(getContext().system(), this);
     private final String workerId = UUID.randomUUID().toString();
@@ -86,12 +81,13 @@ public abstract class Worker extends UntypedActor {
      */
     private String currentWorkId = null;
 
-    public Worker(ActorRef clusterClient, Props workExecutorProps, FiniteDuration registerInterval) {
-        this.clusterClient = clusterClient;
-        this.workExecutorProps = workExecutorProps;
-        this.registerInterval = registerInterval;
-        this.workExecutor = getContext().watch(getContext().actorOf(workExecutorProps,
-                getSelf().path().name() + "exec"));
+    @PostConstruct
+    public void init() {
+        /**
+         * The time between worker registrations with the master
+         */
+        final FiniteDuration registerInterval = Duration.create(10, "seconds");
+
         this.registerTask = getContext().system().scheduler().schedule(Duration.Zero(), registerInterval,
                 clusterClient, new SendToAll("/user/master/active", new RegisterWorker(workerId, getWorkType())),
                 getContext().dispatcher(), getSelf());
@@ -163,7 +159,7 @@ public abstract class Worker extends UntypedActor {
                 Work work = (Work) message;
                 log.info("Got work: {}", work.toString());
                 currentWorkId = work.workId;
-                workExecutor.tell(work, getSelf());
+                sentimentWorkerExecutor.tell(work, getSelf());
                 getContext().become(working);
             }
             else unhandled(message);
@@ -221,7 +217,7 @@ public abstract class Worker extends UntypedActor {
 
     @Override
     public void unhandled(Object message) {
-        if (message instanceof Terminated && ((Terminated) message).getActor().equals(workExecutor)) {
+        if (message instanceof Terminated && ((Terminated) message).getActor().equals(sentimentWorkerExecutor)) {
             getContext().stop(getSelf());
         }
         else if (message instanceof WorkIsReady) {

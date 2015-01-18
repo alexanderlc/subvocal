@@ -13,8 +13,8 @@ mvn clean package && java -jar target/web-0.0.1.jar
 - Allow injection of spring managed services into key actors.  In particular the worker actors
 
 # Todo
-
-- Add create sentiment as a worker task
+- Tidy up akka configs, and injection of work executors
+- Tidy up response to create Sentiment (Ack & tell not ask for result)
 - Get sentiment summary as a worker task
 - Frontend app to use the API
 - seed nodes and remove manual cluster joining
@@ -24,6 +24,7 @@ mvn clean package && java -jar target/web-0.0.1.jar
 - Call system actor shutdown and terminate when the spring context is shutting down
 
 # Done
+- Add create sentiment as a worker task
 - revert to a multiple actor system context
 - workers should only register for work they can complete
 
