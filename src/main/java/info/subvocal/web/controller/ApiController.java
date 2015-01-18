@@ -111,20 +111,23 @@ public class ApiController {
 
     @ResponseBody
     @RequestMapping(value = "_square", method = GET)
-    public ResponseEntity<Long> square(
+    public ResponseEntity<String> square(
             @RequestParam Integer operand
     ) throws Exception {
 
         final Timeout t = new Timeout(Duration.create(5, TimeUnit.SECONDS));
 
+        // todo handle either the NotOk or the work result
+
         Future<Object> futureResult
                 = ask(frontend, new Master.Work(nextWorkId(), operand), t);
 
         try {
-            Long result = (Long) Await.result(futureResult, Duration.create(10, TimeUnit.SECONDS));
+            Object response = Await.result(futureResult, Duration.create(10, TimeUnit.SECONDS));
+            String result = (String) response;
             return new ResponseEntity<>(result, HttpStatus.OK);
         } catch (Exception e) {
-            System.err.println("Failed getting result: " + e.getMessage());
+            LOGGER.error("Failed getting result: {}", e.getMessage());
             throw e;
         }
     }

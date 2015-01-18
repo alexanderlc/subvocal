@@ -2,8 +2,8 @@ package info.subvocal.web.akka.actor;
 
 import akka.actor.ActorRef;
 import akka.actor.UntypedActor;
-import akka.contrib.pattern.ClusterClient;
 import akka.contrib.pattern.DistributedPubSubExtension;
+import akka.contrib.pattern.DistributedPubSubMediator;
 import akka.dispatch.Mapper;
 import akka.dispatch.Recover;
 import akka.util.Timeout;
@@ -18,9 +18,10 @@ import scala.concurrent.duration.Duration;
 
 import javax.inject.Named;
 import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Map;
 
 import static akka.pattern.Patterns.ask;
-import static akka.pattern.Patterns.pipe;
 
 /**
  * An actor that behaves as a broker between the REST api and the rest of the actor system.
@@ -44,6 +45,13 @@ public class ApiBrokerActor extends UntypedActor {
 
     final ActorRef mediator = DistributedPubSubExtension.get(getContext().system()).mediator();
 
+    private Map<String, ActorRef> apiCallbacks = new HashMap<>();
+
+    {
+        // subscribe to work results, we are assuming all work results are relevant for the API to response with
+        mediator.tell(new DistributedPubSubMediator.Subscribe(Master.ResultsTopic, getSelf()), getSelf());
+    }
+
     @Override
     public void onReceive(Object message) throws Exception {
 
@@ -54,12 +62,30 @@ public class ApiBrokerActor extends UntypedActor {
                 || message instanceof SquareRequest
                 || message instanceof Master.Work) {
 
+            if (message instanceof Master.Work) {
+                // remember the actor that made the work request so we can respond
+                Master.Work work = (Master.Work) message;
+                apiCallbacks.put(work.workId, getSender());
+            }
+
             forwardWork(message);
 
+            // todo Work out if we still want one actor per request
             // the actor's job is now done, stop
 //            getContext().stop(getSelf());
 
-        } else {
+        } else if (message instanceof DistributedPubSubMediator.SubscribeAck) {
+            // do nothing
+
+        } else if (message instanceof Master.WorkResult) {
+            Master.WorkResult workResult = (Master.WorkResult) message;
+            LOGGER.info("Consumed result: {}", workResult.result);
+
+            // supply the work result to the original calling actor
+            apiCallbacks.get(workResult.workId).tell(workResult.result, getSelf());
+            // clean up work
+            apiCallbacks.remove(workResult.workId);
+        }else {
             unhandled(message);
         }
     }
@@ -69,33 +95,44 @@ public class ApiBrokerActor extends UntypedActor {
      * @param message a supported API request
      */
     private void forwardWork(Object message) {
+        try {
 
-        LOGGER.info("Forwarding message to master for distribution");
+            LOGGER.info("Forwarding message to master for distribution");
 
-        // work is sent via the master actor, f being a future message
-        Future<Object> f =
-                ask(mediator, new ClusterClient.Send("/user/master/active", message, false),
-                        new Timeout(Duration.create(5, "seconds")));
+            // work is sent via the master actor, f being a future message
+            DistributedPubSubMediator.Send send
+                    = new DistributedPubSubMediator.Send("/user/master/active", message, false);
 
-        final ExecutionContext ec = getContext().system().dispatcher();
+            Future<Object> f =
+                    ask(mediator, send,
+                            new Timeout(Duration.create(5, "seconds")));
 
-        // reply to the client (ApiController) when the job has been accepted or denied by the master
-        Future<Object> res = f.map(new Mapper<Object, Object>() {
-            @Override
-            public Object apply(Object msg) {
-                if (msg instanceof Master.Ack)
-                    return Ok.getInstance();
-                else
-                    return super.apply(msg);
-            }
-        }, ec).recover(new Recover<Object>() {
-            @Override
-            public Object recover(Throwable failure) throws Throwable {
-                return NotOk.getInstance();
-            }
-        }, ec);
+            final ExecutionContext ec = getContext().system().dispatcher();
 
-        pipe(res, ec).to(getSender());
+            // reply to the client (ApiController) when the job has been accepted or denied by the master
+            Future<Object> res = f.map(new Mapper<Object, Object>() {
+                @Override
+                public Object apply(Object msg) {
+                    if (msg instanceof Master.Ack)
+                        return Ok.getInstance();
+                    else
+                        return super.apply(msg);
+                }
+            }, ec).recover(new Recover<Object>() {
+                @Override
+                public Object recover(Throwable failure) throws Throwable {
+                    return NotOk.getInstance();
+                }
+            }, ec);
+
+            // todo handle the NotOK case back to the caller
+            // todo overwise wait for the real response
+//            pipe(res, ec).to(getSender());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            LOGGER.error(e.getMessage());
+        }
     }
 
     // todo create an ApiProtocol class structure
