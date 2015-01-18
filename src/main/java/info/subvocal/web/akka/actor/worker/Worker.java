@@ -14,6 +14,7 @@ import akka.contrib.pattern.ClusterClient.SendToAll;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
 import akka.japi.Function;
+import info.subvocal.web.akka.actor.message.Work;
 import scala.concurrent.duration.Duration;
 import scala.concurrent.duration.FiniteDuration;
 
@@ -25,7 +26,6 @@ import static akka.actor.SupervisorStrategy.escalate;
 import static akka.actor.SupervisorStrategy.restart;
 import static akka.actor.SupervisorStrategy.stop;
 import static info.subvocal.web.akka.actor.worker.Master.Ack;
-import static info.subvocal.web.akka.actor.worker.Master.Work;
 import static info.subvocal.web.akka.actor.worker.MasterWorkerProtocol.RegisterWorker;
 import static info.subvocal.web.akka.actor.worker.MasterWorkerProtocol.WorkFailed;
 import static info.subvocal.web.akka.actor.worker.MasterWorkerProtocol.WorkIsDone;
@@ -164,11 +164,11 @@ public class Worker extends UntypedActor {
         public void apply(Object message) {
             if (message instanceof MasterWorkerProtocol.WorkIsReady)
                 sendToMaster(new MasterWorkerProtocol.WorkerRequestsWork(workerId));
-            else if (message instanceof Work) {
+            else if (Work.class.isAssignableFrom(message.getClass())) {
                 Work work = (Work) message;
-                log.info("Got work: {}", work.job);
+                log.info("Got work: {}", work.toString());
                 currentWorkId = work.workId;
-                workExecutor.tell(work.job, getSelf());
+                workExecutor.tell(work, getSelf());
                 getContext().become(working);
             }
             else unhandled(message);

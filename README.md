@@ -14,9 +14,18 @@ mvn clean package && java -jar target/web-0.0.1.jar
 
 # Todo
 
+- workers should only register for work they can complete
+- Add create sentiment as a worker task
+- Get sentiment summary as a worker task
+- Frontend app to use the API
 - seed nodes and remove manual cluster joining
+- Docker install for API instance, Worker system
+- Add test support
 - Use validation annotations
 - Call system actor shutdown and terminate when the spring context is shutting down
+
+# Done
+- revert to a multiple actor system context
 
 # Acknowledgements
 

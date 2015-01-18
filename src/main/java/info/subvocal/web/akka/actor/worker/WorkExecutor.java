@@ -3,6 +3,7 @@ package info.subvocal.web.akka.actor.worker;
 import akka.actor.UntypedActor;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
+import info.subvocal.web.akka.actor.message.Work;
 
 /**
  * When the worker receives work from the master it delegates the actual processing to a child actor, WorkExecutor,
@@ -14,8 +15,8 @@ public class WorkExecutor extends UntypedActor {
 
     @Override
     public void onReceive(Object message) {
-        if (message instanceof Integer) {
-            Integer n = (Integer) message;
+        if (message instanceof Work.Square) {
+            Integer n = ((Work.Square) message).getOperand();
             int n2 = n * n;
             String result = n + " * " + n + " = " + n2;
             log.debug("Produced result {}", result);

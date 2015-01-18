@@ -9,6 +9,8 @@ import akka.actor.Props;
 import akka.cluster.Cluster;
 import akka.contrib.pattern.ClusterClient;
 import akka.contrib.pattern.ClusterSingletonManager;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 import info.subvocal.web.akka.actor.ApiBrokerActor;
 import info.subvocal.web.akka.actor.worker.Master;
 import info.subvocal.web.akka.actor.worker.WorkExecutor;
@@ -38,6 +40,9 @@ class AkkaConfig {
     // reference for creation of ActorRef beans
     private ActorSystem actorSystem;
 
+    private Address realJoinAddress;
+
+    private static String systemName = "Workers";
     private static FiniteDuration workTimeout = Duration.create(10, "seconds");
 
     // the application context is needed to initialize the Akka Spring Extension
@@ -77,59 +82,62 @@ class AkkaConfig {
                 SpringExtProvider.get(actorSystem).props("SentimentPersistenceActor"), "sentimentPersistenceActor");
     }
 
-    /**
-     *  what follows is a simplified setup with a single actor system
-     */
-
     @Bean
-    public ActorRef master() throws InterruptedException {
+    public ActorSystem backendActorSystem() throws InterruptedException {
 
         // todo work out the detail for why we have 2 masters/backend, with only the 2nd one connected to the frontend
 
-        BackendStartupResponse backendStartupResponse = startBackend(actorSystem, null);
+        BackendStartupResponse backendStartupResponse = startBackend(null, "backend");
         Address joinAddress = backendStartupResponse.getJoinAddress();
-        Thread.sleep(5000);
-        return backendStartupResponse.getMaster();
+        Thread.sleep(1000);
+        realJoinAddress = startBackend(joinAddress, "backend").getJoinAddress();
+        return backendStartupResponse.getActorSystem();
     }
 
     @Bean
-    public ActorRef worker() throws InterruptedException {
-        ActorRef worker = startWorker(actorSystem);
-        Thread.sleep(5000);
-        return worker;
+    public ActorSystem workerActorSystem() throws InterruptedException {
+        ActorSystem workerActorSystem = startWorker(realJoinAddress);
+        Thread.sleep(1000);
+        return workerActorSystem;
     }
 
     @Bean
     public ActorRef frontend() {
-        return startFrontend(actorSystem);
+        return startFrontend(realJoinAddress);
     }
 
-    private static BackendStartupResponse startBackend(ActorSystem actorSystem, String role) {
+    private static BackendStartupResponse startBackend(Address joinAddress, String role) {
 
         LOGGER.info("startBackend called");
+        Config conf = ConfigFactory.parseString("akka.cluster.roles=[" + role + "]").
+                withFallback(ConfigFactory.load());
+
+        // create the backend actor system
+        ActorSystem system = ActorSystem.create(systemName, conf);
 
         // todo work out how this cluster stuff works
-        Address joinAddress = Cluster.get(actorSystem).selfAddress();
-        Cluster.get(actorSystem).join(joinAddress);
+        Address realJoinAddress =
+                (joinAddress == null) ? Cluster.get(system).selfAddress() : joinAddress;
+        Cluster.get(system).join(realJoinAddress);
 
         // create the master singleton
-        ActorRef master = actorSystem.actorOf(ClusterSingletonManager.defaultProps(Master.props(workTimeout), "active",
+        system.actorOf(ClusterSingletonManager.defaultProps(Master.props(workTimeout), "active",
                 PoisonPill.getInstance(), role), "master");
 
-        return new BackendStartupResponse(master, joinAddress);
+        return new BackendStartupResponse(system, realJoinAddress);
     }
 
     private static class BackendStartupResponse {
-        private ActorRef master;
+        private ActorSystem actorSystem;
         private Address joinAddress;
 
-        private BackendStartupResponse(ActorRef master, Address joinAddress) {
-            this.master = master;
+        private BackendStartupResponse(ActorSystem actorSystem, Address joinAddress) {
+            this.actorSystem = actorSystem;
             this.joinAddress = joinAddress;
         }
 
-        public ActorRef getMaster() {
-            return master;
+        public ActorSystem getActorSystem() {
+            return actorSystem;
         }
 
         public Address getJoinAddress() {
@@ -137,25 +145,36 @@ class AkkaConfig {
         }
     }
 
-    private static ActorRef startWorker(ActorSystem actorSystem) {
+    private static ActorSystem startWorker(Address contactAddress) {
         LOGGER.info("startWorker called");
 
-        Address contactAddress = Cluster.get(actorSystem).selfAddress();
+        // create the worker actor system
+        ActorSystem system = ActorSystem.create(systemName);
 
-        Set<ActorSelection> initialContacts = new HashSet<>();
-        initialContacts.add(actorSystem.actorSelection(contactAddress + "/user/receptionist"));
+        Set<ActorSelection> initialContacts = new HashSet<ActorSelection>();
+        initialContacts.add(system.actorSelection(contactAddress + "/user/receptionist"));
 
         // create the client client
-        ActorRef clusterClient = actorSystem.actorOf(ClusterClient.defaultProps(initialContacts),
+        ActorRef clusterClient = system.actorOf(ClusterClient.defaultProps(initialContacts),
                 "clusterClient");
 
         // create the worker - they manage their own executor
-        return actorSystem.actorOf(Worker.props(clusterClient, Props.create(WorkExecutor.class)), "worker");
+        system.actorOf(Worker.props(clusterClient, Props.create(WorkExecutor.class)), "worker");
+
+        return system;
     }
 
-    private static ActorRef startFrontend(ActorSystem actorSystem) {
+    private static ActorRef startFrontend(Address joinAddress) {
         LOGGER.info("startFrontend called");
+        // create the frontend actor system
+        ActorSystem system = ActorSystem.create(systemName);
 
-        return actorSystem.actorOf(Props.create(ApiBrokerActor.class), "frontend");
+        Cluster.get(system).join(joinAddress);
+
+        ActorRef frontend = system.actorOf(Props.create(ApiBrokerActor.class), "frontend");
+//        system.actorOf(Props.create(WorkProducer.class, frontend), "producer");
+//        system.actorOf(Props.create(WorkResultConsumer.class), "consumer");
+
+        return frontend;
     }
 }

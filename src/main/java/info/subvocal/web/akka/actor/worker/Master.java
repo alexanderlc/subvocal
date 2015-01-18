@@ -9,6 +9,7 @@ import akka.contrib.pattern.DistributedPubSubMediator;
 import akka.contrib.pattern.DistributedPubSubMediator.Put;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
+import info.subvocal.web.akka.actor.message.Work;
 import scala.concurrent.duration.Deadline;
 import scala.concurrent.duration.FiniteDuration;
 
@@ -21,7 +22,11 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 
-import static info.subvocal.web.akka.actor.worker.MasterWorkerProtocol.*;
+import static info.subvocal.web.akka.actor.worker.MasterWorkerProtocol.RegisterWorker;
+import static info.subvocal.web.akka.actor.worker.MasterWorkerProtocol.WorkFailed;
+import static info.subvocal.web.akka.actor.worker.MasterWorkerProtocol.WorkIsDone;
+import static info.subvocal.web.akka.actor.worker.MasterWorkerProtocol.WorkIsReady;
+import static info.subvocal.web.akka.actor.worker.MasterWorkerProtocol.WorkerRequestsWork;
 
 /**
  * The heart of the solution is the Master actor that manages outstanding work and notifies registered workers when new
@@ -125,7 +130,7 @@ public class Master extends UntypedActor {
                 WorkerState state = workers.get(workerId);
                 if (state != null && state.status.isIdle()) {
                     Work work = pendingWork.remove();
-                    log.info("Giving worker {} some work {}", workerId, work.job);
+                    log.info("Giving worker {} some work {}", workerId, work.toString());
                     // TODO store in Eventsourced
                     getSender().tell(work, getSelf());
                     workers.put(workerId, state.copyWithStatus(new Busy(work, workTimeout.fromNow())));
@@ -341,24 +346,6 @@ public class Master extends UntypedActor {
             return "CleanupTick";
         }
     };
-
-    public static final class Work implements Serializable {
-        public final String workId;
-        public final Object job;
-
-        public Work(String workId, Object job) {
-            this.workId = workId;
-            this.job = job;
-        }
-
-        @Override
-        public String toString() {
-            return "Work{" +
-                    "workId='" + workId + '\'' +
-                    ", job=" + job +
-                    '}';
-        }
-    }
 
     public static final class WorkResult implements Serializable {
         public final String workId;

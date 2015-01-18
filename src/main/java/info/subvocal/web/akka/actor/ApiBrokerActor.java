@@ -7,7 +7,7 @@ import akka.contrib.pattern.DistributedPubSubMediator;
 import akka.dispatch.Mapper;
 import akka.dispatch.Recover;
 import akka.util.Timeout;
-import info.subvocal.web.akka.actor.message.CreateSentiment;
+import info.subvocal.web.akka.actor.message.Work;
 import info.subvocal.web.akka.actor.worker.Master;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,18 +57,10 @@ public class ApiBrokerActor extends UntypedActor {
 
         LOGGER.info("ApiBrokerActor: Received message: {}", message);
 
-        if (message instanceof CreateSentiment
-                || message instanceof SentimentPersistenceActor.Get10Sentiments
-                || message instanceof SquareRequest
-                || message instanceof Master.Work) {
+        if (Work.class.isAssignableFrom(message.getClass())) {
 
-            if (message instanceof Master.Work) {
-                // remember the actor that made the work request so we can respond
-                Master.Work work = (Master.Work) message;
-                apiCallbacks.put(work.workId, getSender());
-            }
-
-            forwardWork(message);
+            apiCallbacks.put(((Work) message).workId, getSender());
+            forwardWorkToBackend(message);
 
             // todo Work out if we still want one actor per request
             // the actor's job is now done, stop
@@ -94,7 +86,7 @@ public class ApiBrokerActor extends UntypedActor {
      * Ask the cluster to fulfill the request by processing the work
      * @param message a supported API request
      */
-    private void forwardWork(Object message) {
+    private void forwardWorkToBackend(Object message) {
         try {
 
             LOGGER.info("Forwarding message to master for distribution");
@@ -132,20 +124,6 @@ public class ApiBrokerActor extends UntypedActor {
         } catch (Exception e) {
             e.printStackTrace();
             LOGGER.error(e.getMessage());
-        }
-    }
-
-    // todo create an ApiProtocol class structure
-
-    public static class SquareRequest implements Serializable {
-        private int operand;
-
-        public SquareRequest(int operand) {
-            this.operand = operand;
-        }
-
-        public int getOperand() {
-            return operand;
         }
     }
 

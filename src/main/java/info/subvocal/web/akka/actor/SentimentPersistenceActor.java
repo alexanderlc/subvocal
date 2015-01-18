@@ -2,7 +2,7 @@ package info.subvocal.web.akka.actor;
 
 import akka.actor.UntypedActor;
 import info.subvocal.sentiment.repository.SentimentRepository;
-import info.subvocal.web.akka.actor.message.CreateSentiment;
+import info.subvocal.web.akka.actor.message.Work;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Scope;
@@ -27,8 +27,8 @@ public class SentimentPersistenceActor extends UntypedActor {
     public void onReceive(Object message) throws Exception {
         LOGGER.info("SentimentPersistenceActor: Received message: {}", message);
 
-        if (message instanceof CreateSentiment) {
-            CreateSentiment createSentiment = (CreateSentiment) message;
+        if (message instanceof Work.CreateSentiment) {
+            Work.CreateSentiment createSentiment = (Work.CreateSentiment) message;
             sentimentRepository.createSentiment(
                     createSentiment.getSentiment().getUrl(),
                     createSentiment.getSentiment().getSentimentType(),

@@ -4,10 +4,11 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.util.Timeout;
 import info.subvocal.sentiment.entity.Sentiment;
+import info.subvocal.web.akka.actor.ApiBrokerActor;
 import info.subvocal.web.akka.actor.CountingActor;
 import info.subvocal.web.akka.actor.SentimentPersistenceActor;
-import info.subvocal.web.akka.actor.message.CreateSentiment;
-import info.subvocal.web.akka.actor.worker.Master;
+import info.subvocal.web.akka.actor.message.Work;
+import info.subvocal.web.controller.exception.BackendFailureException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -60,6 +61,14 @@ public class ApiController {
         return message;
     }
 
+    @ExceptionHandler(BackendFailureException.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public @ResponseBody String handleBackendFailureException(Exception e) throws Exception {
+        String message = "Backend rejected request: " + e.getMessage();
+        LOGGER.error(message, e);
+        return message;
+    }
+
     @ResponseBody
     @RequestMapping(value = "_ping", method = GET)
     public ResponseEntity<Boolean> ping() {
@@ -81,7 +90,7 @@ public class ApiController {
         try {
             // Tell the sentiment actor to create the sentiment.
             // This is a fire and forget, the API is async and does not guarantee it will actually be created
-            apiBrokerActor().tell(new CreateSentiment(sentiment), null);
+            frontend.tell(new Work.CreateSentiment(nextWorkId(), sentiment), null);
             return new ResponseEntity<>("Create sentiment request received", HttpStatus.CREATED);
         } catch (Exception e) {
             LOGGER.error("Failed to initiate sentiment request: {}" + e);
@@ -111,25 +120,47 @@ public class ApiController {
 
     @ResponseBody
     @RequestMapping(value = "_square", method = GET)
-    public ResponseEntity<String> square(
-            @RequestParam Integer operand
-    ) throws Exception {
+    public ResponseEntity<String> square(@RequestParam Integer operand) {
 
-        final Timeout t = new Timeout(Duration.create(5, TimeUnit.SECONDS));
+        return handleResponseFromApiBroker(
+                ask(frontend, new Work.Square(nextWorkId(), operand), askTimeOut())
+        );
+    }
 
-        // todo handle either the NotOk or the work result
-
-        Future<Object> futureResult
-                = ask(frontend, new Master.Work(nextWorkId(), operand), t);
-
+    /**
+     * @param futureResult for some work to result in an API response
+     * @param <T> The response type
+     * @return OK response entity
+     */
+    private <T> ResponseEntity<T> handleResponseFromApiBroker(Future<Object> futureResult) {
         try {
-            Object response = Await.result(futureResult, Duration.create(10, TimeUnit.SECONDS));
-            String result = (String) response;
+            Object response = Await.result(futureResult, waitDuration());
+
+            if (response instanceof ApiBrokerActor.NotOk) {
+                throw new BackendFailureException(response.toString());
+            }
+
+            T result = (T) response;
             return new ResponseEntity<>(result, HttpStatus.OK);
         } catch (Exception e) {
-            LOGGER.error("Failed getting result: {}", e.getMessage());
-            throw e;
+            // convert to a runtime exception
+            LOGGER.error("Failed handleResponseFromApiBroker: {}", e.getMessage());
+            throw new BackendFailureException(e.getMessage());
         }
+    }
+
+    /**
+     * The time we wait for a future to comeback from akka
+     */
+    private Timeout askTimeOut() {
+        return new Timeout(Duration.create(2, TimeUnit.SECONDS));
+    }
+
+    /**
+     * The time we wait for our work to be completed
+     */
+    private FiniteDuration waitDuration() {
+        return Duration.create(10, TimeUnit.SECONDS);
     }
 
     private String nextWorkId() {

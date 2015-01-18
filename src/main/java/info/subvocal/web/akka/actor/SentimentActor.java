@@ -1,7 +1,7 @@
 package info.subvocal.web.akka.actor;
 
 import akka.actor.UntypedActor;
-import info.subvocal.web.akka.actor.message.CreateSentiment;
+import info.subvocal.web.akka.actor.message.Work;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Scope;
@@ -25,7 +25,7 @@ public class SentimentActor extends UntypedActor {
 
     @Override
     public void onReceive(Object message) throws Exception {
-        if (message instanceof CreateSentiment) {
+        if (message instanceof Work.CreateSentiment) {
 
             LOGGER.info("SentimentActor: Received message: {}", message);
 
