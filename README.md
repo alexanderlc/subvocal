@@ -1,11 +1,53 @@
 subvocal
 ========
 
-# Build and run
+# Build locally and run
 
 ```
 mvn clean package && java -jar target/web-0.0.1.jar
 ```
+
+## Using Docker
+
+To build the docker image:
+
+```
+docker build -t subvocal/web:0.0.1 .
+```
+
+Confirm image was added to local repository:
+
+```
+docker images
+```
+
+To run this container in the background:
+
+```
+docker run -t -i -d -p 8080:8080 -p 8009:8009 --name web subvocal/web:0.0.1
+```
+
+Confirm the container is running:
+
+```
+docker ps
+```
+
+Review the container logs to confirm correct application startup:
+
+```
+docker -f --tail 100 logs <container-id>
+```
+
+Review full details of the container:
+
+```
+docker inspect <container-id>
+```
+
+The application should be now running at
+
+http://192.168.59.103:8080/
 
 # Spring integration
 
@@ -13,6 +55,8 @@ mvn clean package && java -jar target/web-0.0.1.jar
 - Allow injection of spring managed services into key actors.  In particular the worker actors
 
 # Todo
+- Setup local development environment with Docker allowing IDE debugging
+- Split components into separate containers and link then together to simplify networking config https://docs.docker.com/userguide/dockerlinks/
 - Tidy up akka configs, and injection of work executors
 - Tidy up response to create Sentiment (Ack & tell not ask for result)
 - Get sentiment summary as a worker task
