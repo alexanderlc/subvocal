@@ -3,7 +3,6 @@ package info.subvocal.web.akka.config;
 import akka.actor.ActorRef;
 import akka.actor.ActorSelection;
 import akka.actor.ActorSystem;
-import akka.actor.Address;
 import akka.contrib.pattern.ClusterClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,14 +26,12 @@ public class AkkaWorkerSystemConfig {
     @Inject
     private ActorSystem workerActorSystem;
 
-    @Inject
-    private Address clusterJoinAddress;
-
     @Bean
     public ActorRef clusterClient() {
         LOGGER.info("Info clusterClient");
         Set<ActorSelection> initialContacts = new HashSet<>();
-        initialContacts.add(workerActorSystem.actorSelection(clusterJoinAddress + "/user/receptionist"));
+        // todo out impact of removing the join address here?
+        initialContacts.add(workerActorSystem.actorSelection("/user/receptionist"));
 
         // create the client client
         return workerActorSystem.actorOf(ClusterClient.defaultProps(initialContacts),

@@ -55,13 +55,14 @@ http://192.168.59.103:8080/
 - Allow injection of spring managed services into key actors.  In particular the worker actors
 
 # Todo
+- seed nodes and remove manual cluster joining
+- Join regular nodel to seeds via Docker container linking and using jvm params to pass in seed node details
 - Setup local development environment with Docker allowing IDE debugging
 - Split components into separate containers and link then together to simplify networking config https://docs.docker.com/userguide/dockerlinks/
 - Tidy up akka configs, and injection of work executors
 - Tidy up response to create Sentiment (Ack & tell not ask for result)
 - Get sentiment summary as a worker task
 - Frontend app to use the API
-- seed nodes and remove manual cluster joining
 - Docker install for API instance, Worker system
 - Add test support
 - Use validation annotations
