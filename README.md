@@ -50,6 +50,18 @@ The application should be now running at
 
 http://192.168.59.103:8080/
 
+### Trouble shooting
+DNS for docker daemon, to get yum to resolve mirrors during docker build process.
+```
+boot2docker ssh
+
+Add the following to /etc/resolv.conf:
+
+# Google DNS
+nameserver 8.8.8.8
+nameserver 8.8.4.4
+```
+
 # Spring integration
 
 - Manage the app, and the spring mvn REST API

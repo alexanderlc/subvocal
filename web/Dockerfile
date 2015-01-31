@@ -1,6 +1,13 @@
 FROM centos:latest
 
-# todo revert RUN yum update
+RUN yum -y update
+
+# For ifconfig
+RUN yum -y install net-tools
+
+# Add/copy our scripts
+COPY bin/start-cluster-node.sh /root/bin/start-cluster-node.sh
+RUN chmod +x /root/bin/start-cluster-node.sh
 
 # Java 7 SDK, -y to always answer yes to yum install
 RUN yum -y install java-1.7.0-openjdk.x86_64
@@ -12,9 +19,10 @@ ADD target/web-0.0.1.jar /usr/share/subvocal/web/web-0.0.1.jar
 WORKDIR /usr/share/subvocal/web
 
 # make the jar executable
-RUN chmod a+x web-0.0.1.jar
+RUN chmod +x web-0.0.1.jar
 
 # Tell docker which ports the container will listen on (standard Tomcat)
 EXPOSE 8009 8080
 
-# ENTRYPOINT java -jar web-0.0.1.jar
+# Wrapper script to allow environment setup
+ENTRYPOINT ["/root/bin/start-cluster-node.sh"]
