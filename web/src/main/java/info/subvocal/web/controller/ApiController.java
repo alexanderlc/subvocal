@@ -1,16 +1,15 @@
 package info.subvocal.web.controller;
 
 import akka.actor.ActorRef;
-import akka.actor.ActorSystem;
 import akka.util.Timeout;
 import info.subvocal.sentiment.entity.Sentiment;
 import info.subvocal.web.akka.actor.ApiBrokerActor;
-import info.subvocal.web.akka.actor.CountingActor;
 import info.subvocal.web.akka.actor.SentimentPersistenceActor;
 import info.subvocal.web.akka.actor.message.Work;
 import info.subvocal.web.controller.exception.BackendFailureException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
@@ -33,7 +32,6 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static akka.pattern.Patterns.ask;
-import static info.subvocal.web.akka.spring.SpringExtension.SpringExtProvider;
 import static org.springframework.web.bind.annotation.RequestMethod.GET;
 import static org.springframework.web.bind.annotation.RequestMethod.POST;
 
@@ -41,13 +39,11 @@ import static org.springframework.web.bind.annotation.RequestMethod.POST;
  *  Public API REST endpoints
  */
 @RestController
+@Profile(value = "backend")
 @RequestMapping(value = "/api/v1.0", produces = "application/json")
 public class ApiController {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ApiController.class);
-
-    @Inject
-    private ActorSystem actorSystem;
 
     @Inject
     private ActorRef frontend;
@@ -159,42 +155,13 @@ public class ApiController {
         return UUID.randomUUID().toString();
     }
 
-    @ResponseBody
-    @RequestMapping(value = "_count-once", method = GET)
-    public ResponseEntity<Integer> count() throws Exception {
-
-        // The counter actor will exist for the duration of a single method call
-
-        // use the Spring Extension to create props for a named actor bean
-        ActorRef counter = actorSystem.actorOf(
-                SpringExtProvider.get(actorSystem).props("CountingActor"), "counter_"
-                        + UUID.randomUUID());
-
-        // tell it to count once
-        counter.tell(new CountingActor.Count(), null);
-
-        // print and return the result
-        FiniteDuration duration = FiniteDuration.create(3, TimeUnit.SECONDS);
-        Future<Object> result = ask(counter, new CountingActor.Get(),
-                Timeout.durationToTimeout(duration));
-        try {
-            Integer countResult = (Integer) Await.result(result, duration);
-            System.out.println("Got back " + countResult);
-            return new ResponseEntity<>(countResult, HttpStatus.OK);
-        } catch (Exception e) {
-            System.err.println("Failed getting result: " + e.getMessage());
-            throw e;
-        } finally {
-            // we are done with the actor - stop it
-//            actorSystem.stop(counter);
-        }
-    }
 
     // The apiBrokerActor actor will exist for the duration of a single API method call
     // use the Spring Extension to create props for a named actor bean
     // Add a random name to avoid any non-unique name exceptions
     private ActorRef apiBrokerActor() {
-        return actorSystem.actorOf(
-                SpringExtProvider.get(actorSystem).props("ApiBrokerActor"), "apiBrokerActor_" + UUID.randomUUID());
+//        return actorSystem.actorOf(
+//                SpringExtProvider.get(actorSystem).props("ApiBrokerActor"), "apiBrokerActor_" + UUID.randomUUID());
+        return null;
     }
 }

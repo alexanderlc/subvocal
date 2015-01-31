@@ -1,4 +1,4 @@
-package info.subvocal.web.akka.config;
+package info.subvocal.web.akka.config.worker;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSelection;
@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 
 import javax.inject.Inject;
 import java.util.HashSet;
@@ -19,6 +20,7 @@ import static info.subvocal.web.akka.spring.SpringExtension.SpringExtProvider;
  *  We want the worker system to be spring managed so we can inject our service layer
  */
 @Configuration
+@Profile(value = "worker")
 public class AkkaWorkerSystemConfig {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AkkaWorkerSystemConfig.class);

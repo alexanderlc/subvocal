@@ -9,13 +9,11 @@ import com.typesafe.config.ConfigFactory;
 import info.subvocal.web.akka.actor.worker.distributed.Master;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import scala.concurrent.duration.Duration;
 import scala.concurrent.duration.FiniteDuration;
-
-import javax.inject.Inject;
 
 /**
  * The Akka application configuration.
@@ -23,19 +21,15 @@ import javax.inject.Inject;
  * // todo remove the manual join with seed names, Docker should handle much of this config
  */
 @Configuration
+@Profile(value = "backend")
 class AkkaConfig {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AkkaConfig.class);
 
-    // reference for creation of ActorRef beans
-    private ActorSystem actorSystem;
-
     private static String systemName = "Workers";
     private static FiniteDuration workTimeout = Duration.create(10, "seconds");
 
-    // the application context is needed to initialize the Akka Spring Extension
-    @Inject
-    private ApplicationContext applicationContext;
+
 
     @Bean
     public Address clusterJoinAddress() throws InterruptedException {

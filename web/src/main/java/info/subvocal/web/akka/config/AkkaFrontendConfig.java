@@ -8,11 +8,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 
 /**
  * Created by paul on 18/01/15.
  */
 @Configuration
+@Profile(value = "backend")
 public class AkkaFrontendConfig {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AkkaFrontendConfig.class);

@@ -24,7 +24,8 @@ docker images
 To run this container in the background:
 
 ```
-docker run -t -i -d -p 8080:8080 -p 8009:8009 --name web subvocal/web:0.0.1
+docker run -t -i -d -p 8080:8080 --name backend subvocal/web:0.0.1 java -Dspring.profiles.active=backend -jar web-0.0.1.jar
+docker run -t -i -d -p 8081:8081 --name worker subvocal/web:0.0.1 java -Dspring.profiles.active=worker -Dserver.port=8081 -jar web-0.0.1.jar
 ```
 
 Confirm the container is running:
@@ -36,7 +37,7 @@ docker ps
 Review the container logs to confirm correct application startup:
 
 ```
-docker -f --tail 100 logs <container-id>
+docker logs -f --tail 100 <container-id>
 ```
 
 Review full details of the container:
