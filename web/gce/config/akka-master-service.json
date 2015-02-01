@@ -1,0 +1,13 @@
+{
+    "id": "akka-master",
+    "kind": "Service",
+    "apiVersion": "v1beta1",
+    "port": 2551,
+    "containerPort": "akka-master",
+    "selector": {
+        "name": "akka", "role": "master"
+    },
+    "labels": {
+        "name": "akka-master"
+    }
+}

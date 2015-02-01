@@ -1,0 +1,21 @@
+{
+    "id": "akka-master",
+    "kind": "Pod",
+    "apiVersion": "v1beta1",
+    "desiredState": {
+        "manifest": {
+            "version": "v1beta1",
+            "id": "akka-master",
+            "containers": [{
+                "name": "akka-master",
+                "image": "gcr.io/subvocal_01/subvocal-web:latest",
+                "cpu": 100,
+                "ports": [{ "name": "akka-master", "containerPort": 2551 }],
+                "env": [{"name": "SPRING_PROFILE", "value": "backend"}]
+            }]
+        }
+    },
+    "labels": {
+        "name": "akka", "role": "master"
+    }
+}

@@ -1,0 +1,14 @@
+{
+    "id": "frontend",
+    "kind": "Service",
+    "apiVersion": "v1beta1",
+    "port": 8080,
+    "containerPort": "frontend",
+    "selector": {
+        "name": "akka", "role": "master"
+    },
+    "createExternalLoadBalancer": true,
+    "labels": {
+        "name": "akka-master"
+    }
+}

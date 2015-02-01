@@ -1,3 +1,5 @@
+# The docker image produced by the file is designed to be run configured by environment variables only.
+
 FROM centos:latest
 
 RUN yum -y update
