@@ -17,17 +17,17 @@ gcloud preview docker push gcr.io/subvocal_01/subvocal-web
 
 gcloud preview container clusters create subvocal
 
-gcloud preview container pods create \
-    --config-file config/akka-master-pod.json
-
 # gcloud preview container pods list
 # gcloud compute ssh VM_NAME
 
 gcloud preview container services create \
     --config-file config/akka-master-service.json
 
-gcloud preview container services create \
-    --config-file config/frontend-service.json
+gcloud preview container pods create \
+    --config-file config/akka-master-pod.json
+
+gcloud preview container pods create \
+    --config-file config/akka-worker-pod.json
 
 # gcloud preview container services list
 
