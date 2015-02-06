@@ -1,7 +1,8 @@
 package info.subvocal.sentiment.repository.inmemory;
 
-import info.subvocal.sentiment.entity.SentimentType;
-import info.subvocal.sentiment.repository.SentimentRepository;
+import info.subvocal.service.sentiment.entity.SentimentType;
+import info.subvocal.service.sentiment.repository.SentimentRepository;
+import info.subvocal.service.sentiment.repository.inmemory.InMemorySentimentRepository;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;

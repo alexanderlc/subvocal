@@ -1,5 +1,8 @@
 package info.subvocal.web;
 
+import info.subvocal.service.api.ApiProfileConfig;
+import info.subvocal.service.master.MasterProfileConfig;
+import info.subvocal.service.sentiment.SentimentServiceProfileConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
@@ -7,8 +10,8 @@ import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;
 import org.springframework.boot.autoconfigure.security.SecurityAutoConfiguration;
 import org.springframework.boot.autoconfigure.velocity.VelocityAutoConfiguration;
-import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
 
@@ -16,7 +19,6 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter
  *  main method for app
  */
 @Configuration
-@ComponentScan("info.subvocal")
 @EnableWebMvc
 //@EnableTransactionManagement(proxyTargetClass = true)
 @EnableAutoConfiguration(
@@ -25,6 +27,11 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter
                 HibernateJpaAutoConfiguration.class,
                 SecurityAutoConfiguration.class,
                 VelocityAutoConfiguration.class})
+
+@Import({
+        ApiProfileConfig.class,
+        MasterProfileConfig.class,
+        SentimentServiceProfileConfig.class })
 public class Application extends WebMvcConfigurerAdapter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Application.class);

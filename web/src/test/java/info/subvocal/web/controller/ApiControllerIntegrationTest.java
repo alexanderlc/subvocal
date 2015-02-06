@@ -1,8 +1,8 @@
 package info.subvocal.web.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import info.subvocal.sentiment.entity.Sentiment;
-import info.subvocal.sentiment.entity.SentimentType;
+import info.subvocal.service.sentiment.entity.Sentiment;
+import info.subvocal.service.sentiment.entity.SentimentType;
 import info.subvocal.web.Application;
 import org.junit.Before;
 import org.junit.Test;
