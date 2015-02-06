@@ -23,6 +23,9 @@ gcloud preview container clusters create subvocal
 gcloud preview container services create \
     --config-file config/akka-master-service.json
 
+gcloud preview container services create \
+    --config-file config/frontend-service.json
+
 gcloud preview container pods create \
     --config-file config/akka-master-pod.json
 
@@ -38,5 +41,11 @@ gcloud preview container replicationcontrollers create \
 
 gcloud compute firewall-rules create frontend-node-8080 --allow=tcp:8080 \
     --target-tags k8s-frontend-node
+
+gcloud compute firewall-rules create frontend-node-3000 --allow=tcp:3000 \
+    --target-tags akka-master
+
+gcloud compute firewall-rules create frontend-node-3000 --allow=tcp:3000 \
+    --target-tags k8s-subvocal-node
 
 # gcloud compute forwarding-rules list

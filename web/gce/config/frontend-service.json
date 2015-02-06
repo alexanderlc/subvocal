@@ -2,7 +2,7 @@
     "id": "frontend",
     "kind": "Service",
     "apiVersion": "v1beta1",
-    "port": 8080,
+    "port": 3000,
     "containerPort": "frontend",
     "selector": {
         "name": "akka", "role": "master"

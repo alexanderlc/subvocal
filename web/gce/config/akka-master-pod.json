@@ -10,7 +10,10 @@
                 "name": "akka-master",
                 "image": "gcr.io/subvocal_01/subvocal-web:latest",
                 "cpu": 100,
-                "ports": [{ "name": "akka-master", "containerPort": 2551 }],
+                "ports": [
+                    { "name": "akka-master", "containerPort": 2551 },
+                    { "name": "frontend-from-master", "containerPort": 8080, "hostPort": 3000 }
+                ],
                 "env": [{"name": "SPRING_PROFILE", "value": "backend"}]
             }]
         }
