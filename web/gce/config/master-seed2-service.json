@@ -1,0 +1,13 @@
+{
+    "id": "master-seed2",
+    "kind": "Service",
+    "apiVersion": "v1beta1",
+    "port": 2551,
+    "containerPort": "master-seed2",
+    "selector": {
+        "name": "master-seed2"
+    },
+    "labels": {
+        "name": "master-seed2"
+    }
+}

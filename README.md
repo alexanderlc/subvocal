@@ -58,6 +58,7 @@ boot2docker ssh
 Add the following to /etc/resolv.conf:
 
 # Google DNS
+```
 nameserver 8.8.8.8
 nameserver 8.8.4.4
 ```
@@ -68,20 +69,25 @@ nameserver 8.8.4.4
 - Allow injection of spring managed services into key actors.  In particular the worker actors
 
 # Todo
-- seed nodes and remove manual cluster joining
-- Join regular nodel to seeds via Docker container linking and using jvm params to pass in seed node details
+- Setup DNS
+- Setup SSL
+- API & Service versions and zero downtime deployments
 - Setup local development environment with Docker allowing IDE debugging
-- Split components into separate containers and link then together to simplify networking config https://docs.docker.com/userguide/dockerlinks/
 - Tidy up akka configs, and injection of work executors
 - Tidy up response to create Sentiment (Ack & tell not ask for result)
 - Get sentiment summary as a worker task
 - Frontend app to use the API
-- Docker install for API instance, Worker system
+- Monitor endpoints for services and versions
 - Add test support
 - Use validation annotations
 - Call system actor shutdown and terminate when the spring context is shutting down
 
 # Done
+- Expose GCE environment to world
+- Google Container Engine deployment
+- Docker builds, services to be run in separate containers
+- Select node functionality/service by spring profile
+- seed nodes and remove manual cluster joining
 - Add create sentiment as a worker task
 - revert to a multiple actor system context
 - workers should only register for work they can complete
@@ -90,3 +96,5 @@ nameserver 8.8.4.4
 
 - Akka integration based on http://typesafe.com/activator/template/akka-java-spring
 - Distributed workers based on https://github.com/typesafehub/activator-akka-distributed-workers-java
+- https://cloud.google.com/container-engine/docs/clusters/?hl=en_US
+- Example of Google Container Engine deployment https://cloud.google.com/container-engine/docs/guestbook

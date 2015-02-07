@@ -1,0 +1,22 @@
+{
+    "id": "master-seed2",
+    "kind": "Pod",
+    "apiVersion": "v1beta1",
+    "desiredState": {
+        "manifest": {
+            "version": "v1beta1",
+            "id": "master-seed2",
+            "containers": [{
+                "name": "master-seed2",
+                "image": "gcr.io/subvocal_01/subvocal-web:latest",
+                "ports": [
+                    { "name": "master-seed2", "containerPort": 2551 }
+                ],
+                "env": [{"name": "SPRING_PROFILE", "value": "master-seed2"}]
+            }]
+        }
+    },
+    "labels": {
+        "name": "master-seed2"
+    }
+}

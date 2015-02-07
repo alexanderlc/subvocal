@@ -1,0 +1,27 @@
+{
+    "id": "api-controller",
+    "kind": "ReplicationController",
+    "apiVersion": "v1beta1",
+    "desiredState": {
+        "replicas": 2,
+        "replicaSelector": {"name": "api"},
+        "podTemplate": {
+            "desiredState": {
+                "manifest": {
+                    "version": "v1beta1",
+                    "id": "api-controller",
+                    "containers": [{
+                        "name": "api",
+                        "image": "gcr.io/subvocal_01/subvocal-web:latest",
+                        "ports": [
+                            { "name": "api", "containerPort": 8080 }
+                        ],
+                        "env": [{"name": "SPRING_PROFILE", "value": "api"}]
+                    }]
+                }
+            },
+            "labels": { "name": "api" }
+        }
+    },
+    "labels": { "name": "api" }
+}
