@@ -1,10 +1,9 @@
 package info.subvocal.web;
 
 import info.subvocal.service.api.ApiProfileConfig;
-import info.subvocal.service.master.MasterProfileConfig;
+import info.subvocal.service.master.MasterSeed1ProfileConfig;
+import info.subvocal.service.master.MasterSeed2ProfileConfig;
 import info.subvocal.service.sentiment.SentimentServiceProfileConfig;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;
@@ -30,11 +29,12 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter
 
 @Import({
         ApiProfileConfig.class,
-        MasterProfileConfig.class,
+        MasterSeed1ProfileConfig.class,
+        MasterSeed2ProfileConfig.class,
         SentimentServiceProfileConfig.class })
 public class Application extends WebMvcConfigurerAdapter {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(Application.class);
+    public static final String CLUSTER_NAME = "Workers";
 
     public static void main(String[] args) throws Exception {
         SpringApplication.run(Application.class, args);
