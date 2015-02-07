@@ -49,7 +49,7 @@ import static info.subvocal.service.master.actor.distributed.MasterWorkerProtoco
  * the worker and the work executor.
  * The behaviours are switched using the actor context become() method.
  *
- * Update: Worker is abstract. Subclasses can work on a single WorkType
+ * Update: Worker is abstract. Subclasses can work on a single WorkType, and provide an executor to do the actual work.
  */
 public abstract class Worker extends UntypedActor {
 
@@ -58,14 +58,6 @@ public abstract class Worker extends UntypedActor {
      */
     @Inject
     private ActorRef clusterClient;
-
-    /**
-     * Ref to the worker's child, the actor that actually does the work
-     *
-     * todo something here to remove this
-     */
-    @Inject
-    private ActorRef sentimentWorkerExecutor;
 
     /**
      * A scheduled tasks to regularly re-register with the master
@@ -92,7 +84,9 @@ public abstract class Worker extends UntypedActor {
                 getContext().dispatcher(), getSelf());
     }
 
-    public abstract Work.WorkType getWorkType();
+    protected abstract Work.WorkType getWorkType();
+
+    protected abstract ActorRef getWorkerExecutor();
 
     private String workId() {
         if (currentWorkId != null)
@@ -158,7 +152,7 @@ public abstract class Worker extends UntypedActor {
                 Work work = (Work) message;
                 log.info("Got work: {}", work.toString());
                 currentWorkId = work.workId;
-                sentimentWorkerExecutor.tell(work, getSelf());
+                getWorkerExecutor().tell(work, getSelf());
                 getContext().become(working);
             }
             else unhandled(message);
@@ -216,7 +210,7 @@ public abstract class Worker extends UntypedActor {
 
     @Override
     public void unhandled(Object message) {
-        if (message instanceof Terminated && ((Terminated) message).getActor().equals(sentimentWorkerExecutor)) {
+        if (message instanceof Terminated && ((Terminated) message).getActor().equals(getWorkerExecutor())) {
             getContext().stop(getSelf());
         }
         else if (message instanceof WorkIsReady) {

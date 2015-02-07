@@ -30,11 +30,13 @@ public class SentimentServiceProfileConfig {
     @Inject
     private ActorSystem workerActorSystem;
 
+    /**
+     *  Workers connect to the master via the cluster client
+     */
     @Bean
     public ActorRef clusterClient() {
-        LOGGER.info("Info clusterClient");
+        LOGGER.info("Fired clusterClient");
         Set<ActorSelection> initialContacts = new HashSet<>();
-        // todo out impact of removing the join address here?
         initialContacts.add(workerActorSystem.actorSelection("/user/receptionist"));
 
         // create the client client

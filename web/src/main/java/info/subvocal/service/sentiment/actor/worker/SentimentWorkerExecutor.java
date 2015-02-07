@@ -13,7 +13,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 
 /**
- * Created by paul on 18/01/15.
+ *
  */
 @Named("SentimentWorkerExecutor")
 @Scope("prototype")
@@ -36,6 +36,8 @@ public class SentimentWorkerExecutor extends UntypedActor {
                     createSentiment.getCreatedByUserId());
 
             getSender().tell(new Worker.WorkComplete(createSentiment), getSelf());
+
+            // fire secondary, independent tasks as new work items
         }
     }
 }

@@ -24,8 +24,9 @@ public abstract class Work implements Serializable {
                 '}';
     }
 
+    // todo the master component should not need to maintain the list of supported work types
     public enum WorkType {
-        SQUARE, CREATE_SENTIMENT
+        CREATE_SENTIMENT, COUNT_SENTIMENT
     }
 
     public static final class CreateSentiment extends Work {
@@ -47,21 +48,22 @@ public abstract class Work implements Serializable {
         }
     }
 
-    public static final class Square extends Work {
-        private int operand;
+    public static final class CountSentiment extends Work {
 
-        public Square(String workId, int operand) {
+        private Sentiment sentiment;
+
+        public CountSentiment(String workId, @NotNull Sentiment sentiment) {
             super(workId);
-            this.operand = operand;
+            this.sentiment = sentiment;
         }
 
-        public int getOperand() {
-            return operand;
+        public Sentiment getSentiment() {
+            return sentiment;
         }
 
         @Override
         public WorkType getWorkType() {
-            return WorkType.SQUARE;
+            return WorkType.COUNT_SENTIMENT;
         }
     }
 }

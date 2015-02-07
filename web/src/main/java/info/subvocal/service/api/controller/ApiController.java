@@ -5,7 +5,6 @@ import akka.util.Timeout;
 import info.subvocal.service.api.actor.ApiBrokerActor;
 import info.subvocal.service.api.controller.exception.BackendFailureException;
 import info.subvocal.service.master.actor.distributed.Work;
-import info.subvocal.service.sentiment.actor.SentimentPersistenceActor;
 import info.subvocal.service.sentiment.entity.Sentiment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,23 +45,6 @@ public class ApiController {
     @Inject
     private ActorRef frontend;
 
-    // todo invalid param usage should not be caught here and result in 400 response code
-    @ExceptionHandler(Exception.class)
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public @ResponseBody String handleException(Exception e) throws Exception {
-        String message = "Api general failure: " + e.getMessage();
-        LOGGER.error(message, e);
-        return message;
-    }
-
-    @ExceptionHandler(BackendFailureException.class)
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public @ResponseBody String handleBackendFailureException(Exception e) throws Exception {
-        String message = "Backend rejected request: " + e.getMessage();
-        LOGGER.error(message, e);
-        return message;
-    }
-
     @ResponseBody
     @RequestMapping(value = "_ping", method = GET)
     public ResponseEntity<Boolean> ping() {
@@ -90,28 +72,9 @@ public class ApiController {
             @RequestParam String url
     ) throws Exception {
 
-        final Timeout t = new Timeout(Duration.create(5, TimeUnit.SECONDS));
-
-        Future<Object> futureResult
-                = ask(apiBrokerActor(), new SentimentPersistenceActor.Get10Sentiments(url), t);
-
-        try {
-            List<Sentiment> result = (List<Sentiment>) Await.result(futureResult, Duration.create(5, TimeUnit.SECONDS));
-            return new ResponseEntity<>(result, HttpStatus.OK);
-        } catch (Exception e) {
-            System.err.println("Failed getting result: " + e.getMessage());
-            throw e;
-        }
+        return null;
     }
 
-    @ResponseBody
-    @RequestMapping(value = "_square", method = GET)
-    public ResponseEntity<String> square(@RequestParam Integer operand) {
-
-        return handleResponseFromApiBroker(
-                ask(frontend, new Work.Square(nextWorkId(), operand), askTimeOut())
-        );
-    }
 
     /**
      * @param futureResult for some work to result in an API response
@@ -161,5 +124,22 @@ public class ApiController {
 //        return actorSystem.actorOf(
 //                SpringExtProvider.get(actorSystem).props("ApiBrokerActor"), "apiBrokerActor_" + UUID.randomUUID());
         return null;
+    }
+
+    // todo invalid param usage should not be caught here and result in 400 response code
+    @ExceptionHandler(Exception.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public @ResponseBody String handleException(Exception e) throws Exception {
+        String message = "Api general failure: " + e.getMessage();
+        LOGGER.error(message, e);
+        return message;
+    }
+
+    @ExceptionHandler(BackendFailureException.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public @ResponseBody String handleBackendFailureException(Exception e) throws Exception {
+        String message = "Backend rejected request: " + e.getMessage();
+        LOGGER.error(message, e);
+        return message;
     }
 }

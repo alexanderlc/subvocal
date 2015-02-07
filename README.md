@@ -69,6 +69,10 @@ nameserver 8.8.4.4
 - Allow injection of spring managed services into key actors.  In particular the worker actors
 
 # Todo
+- Remove necessity for master service to know about the different types of messages.  It should be need a new build when
+new functionality is added.
+- Review how to operate as an event bus, rather than a producer-consumer queues (http://doc.akka.io/docs/akka/snapshot/scala/event-bus.html),
+Perhaps the topic notification should be a secondary event?
 - Setup DNS
 - Setup SSL
 - API & Service versions and zero downtime deployments
