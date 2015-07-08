@@ -1,6 +1,19 @@
 subvocal
 ========
 
+An app to experient with a Java only microservice boiler plate, using a distributed worker pattern implemented with Akka. Usage of Docker and Google Container Engine for packaging and deployment of the app and cluster.
+
+The app is written in Java rather than Scala, and uses Spring for dependency injection.
+
+# Build and deploy to Google Container Engine
+
+Launch a GCE cluster with enough nodes for one docker container deployed to each.
+
+- Build a deployable artefact with Maven, build the docker image, tag in format for pushing to google cloud registry, pub to the google container repository - see https://github.com/chenery/subvocal/blob/master/web/build-docker-image.sh
+- Create the GCE cluster as per https://github.com/chenery/subvocal/blob/master/web/gce/create-cluster.sh
+
+These steps deploy 4 services/containers that each run a regular Java/Tomcat stack.  The plan is that there will be a single API service that is load balanced, two Master services that manage the cluster communications and work/request routing, then microservices can be added as per the Sentiment service.  
+
 # Build locally and run
 
 ```
@@ -59,13 +72,14 @@ docker run -i -t -d --name neo4j --cap-add=SYS_RESOURCE -p 7474:7474 tpires/neo4
 http://192.168.59.103:7474/
 
 ### Trouble shooting
+
 DNS for docker daemon, to get yum to resolve mirrors during docker build process.
+
 ```
 boot2docker ssh
+```
+Add the following to /etc/resolv.conf for Google DNS:
 
-Add the following to /etc/resolv.conf:
-
-# Google DNS
 ```
 nameserver 8.8.8.8
 nameserver 8.8.4.4
@@ -73,7 +87,7 @@ nameserver 8.8.4.4
 
 # Spring integration
 
-- Manage the app, and the spring mvn REST API
+- Manages the app, and the spring mvn REST API
 - Allow injection of spring managed services into key actors.  In particular the worker actors
 
 # Todo
