@@ -41,6 +41,18 @@
             <version>1</version>
         </dependency>
 
+        <!-- neo4j for sentiment service-->
+        <dependency>
+            <groupId>org.springframework.data</groupId>
+            <artifactId>spring-data-neo4j-rest</artifactId>
+            <version>3.2.2.RELEASE</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-rest</artifactId>
+        </dependency>
+
         <!-- test depns -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

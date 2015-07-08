@@ -50,6 +50,14 @@ The application should be now running at
 
 http://192.168.59.103:8080/
 
+Start neo4j locally:
+
+```
+docker run -i -t -d --name neo4j --cap-add=SYS_RESOURCE -p 7474:7474 tpires/neo4j
+```
+
+http://192.168.59.103:7474/
+
 ### Trouble shooting
 DNS for docker daemon, to get yum to resolve mirrors during docker build process.
 ```
@@ -102,3 +110,4 @@ Perhaps the topic notification should be a secondary event?
 - Distributed workers based on https://github.com/typesafehub/activator-akka-distributed-workers-java
 - https://cloud.google.com/container-engine/docs/clusters/?hl=en_US
 - Example of Google Container Engine deployment https://cloud.google.com/container-engine/docs/guestbook
+- http://docs.spring.io/autorepo/docs/spring-data-neo4j/3.3.0.M1/reference/html/
